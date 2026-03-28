@@ -1,0 +1,34 @@
+---
+description: Regras do backend NestJS chat-api (WMS, TypeORM, PostgreSQL, SOLID).
+globs: "**/chat-api/**/*.ts"
+alwaysApply: false
+---
+
+# chat-api — regras para o assistente
+
+Leia também **`chat-api/PROJECT-RULES.md`** (guia completo). Este ficheiro resume o obrigatório ao editar ficheiros sob `chat-api/`.
+
+## Stack
+
+NestJS 11, TypeScript strict, TypeORM + PostgreSQL, class-validator, Swagger, ConfigModule. Prefixo global da API: **`/api`**. Swagger: **`/api/docs`**.
+
+## Estrutura WMS
+
+Por recurso em `src/modules/wms/<recurso>/`: `domain/`, `persistence/` (`*.orm-entity.ts`), `http/dto/`, `http/*.controller.ts`, `http/*.service.ts`. Partilhado: `shared/domain/`, `shared/http/` (`date.util`, `query-failed.util`). `wms.module.ts` agrega entidades e providers. Produtos: padrão com `IProductsRepository` + token de injeção.
+
+## Boas práticas
+
+- Controllers finos; services com regras e mapeamento ORM → DTO de resposta.
+- Sem `any`; DTOs validados e documentados (Swagger).
+- Erros de escrita em BD: `rethrowDbError` onde já é padrão.
+- `NotFoundException` com mensagem clara; datas ISO nas respostas (`toIso`).
+- SOLID: SRP por camada; DIP no módulo products (interface de repositório); evitar duplicação desnecessária (DRY nos utilitários compartilhados).
+- Mudanças mínimas e focadas; não refatorar arquivos não relacionados ao pedido.
+
+## Variáveis de ambiente
+
+`DB_*`, `PORT`, `CORS_ORIGIN` — ver `app.module.ts` e `app.config.ts`.
+
+## Antes de finalizar
+
+`yarn build` e `yarn lint` no projeto `chat-api`. Atualizar `WMS-MODEL.md` / seed se o modelo mudar.

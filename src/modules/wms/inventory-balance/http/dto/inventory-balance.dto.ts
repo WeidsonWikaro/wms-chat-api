@@ -1,0 +1,75 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
+
+export class CreateInventoryBalanceDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID('4')
+  productId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID('4')
+  locationId!: string;
+
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID('4')
+  handlingUnitId?: string | null;
+
+  @ApiPropertyOptional({ default: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2_000_000_000)
+  quantityOnHand?: number;
+
+  @ApiPropertyOptional({ default: 0 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2_000_000_000)
+  quantityReserved?: number;
+}
+
+export class UpdateInventoryBalanceDto {
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID('4')
+  handlingUnitId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2_000_000_000)
+  quantityOnHand?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2_000_000_000)
+  quantityReserved?: number;
+}
+
+export class InventoryBalanceResponseDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  productId!: string;
+
+  @ApiProperty()
+  locationId!: string;
+
+  @ApiProperty({ nullable: true })
+  handlingUnitId!: string | null;
+
+  @ApiProperty()
+  quantityOnHand!: number;
+
+  @ApiProperty()
+  quantityReserved!: number;
+
+  @ApiProperty()
+  updatedAt!: string;
+}
