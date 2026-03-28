@@ -16,7 +16,11 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreatePickLineDto, PickLineResponseDto } from './dto/pick-line.dto';
+import {
+  ConfirmPickLineDto,
+  CreatePickLineDto,
+  PickLineResponseDto,
+} from './dto/pick-line.dto';
 import { PickLinesService } from './pick-lines.service';
 
 @ApiTags('pick-lines')
@@ -48,5 +52,20 @@ export class PickLinesController {
   @ApiCreatedResponse({ type: PickLineResponseDto })
   create(@Body() dto: CreatePickLineDto): Promise<PickLineResponseDto> {
     return this.service.create(dto);
+  }
+
+  @Post(':id/confirm-pick')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Confirmar picking (baixa física + libera reserva proporcional à quantidade)',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PickLineResponseDto })
+  confirmPick(
+    @Param('id') id: string,
+    @Body() dto: ConfirmPickLineDto,
+  ): Promise<PickLineResponseDto> {
+    return this.service.confirmPick(id, dto);
   }
 }

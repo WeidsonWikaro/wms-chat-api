@@ -34,6 +34,25 @@ export class CreateTransferOrderDto {
   status?: TransferOrderStatus;
 }
 
+export class ReleaseTransferOrderDto {
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Utilizador que libera a transferência (reserva na origem)',
+  })
+  @IsUUID('4')
+  releasedByUserId!: string;
+}
+
+export class CancelTransferOrderDto {
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Utilizador que cancela (auditoria)',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  cancelledByUserId?: string;
+}
+
 export class TransferOrderResponseDto {
   @ApiProperty()
   id!: string;
@@ -49,6 +68,12 @@ export class TransferOrderResponseDto {
 
   @ApiProperty()
   createdByUserId!: string;
+
+  @ApiProperty({ nullable: true })
+  releasedByUserId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  releasedAt!: string | null;
 
   @ApiProperty({ nullable: true })
   completedByUserId!: string | null;

@@ -16,7 +16,12 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { CreatePickOrderDto, PickOrderResponseDto } from './dto/pick-order.dto';
+import {
+  CancelPickOrderDto,
+  CreatePickOrderDto,
+  PickOrderResponseDto,
+  ReleasePickOrderDto,
+} from './dto/pick-order.dto';
 import { PickOrdersService } from './pick-orders.service';
 
 @ApiTags('pick-orders')
@@ -48,5 +53,34 @@ export class PickOrdersController {
   @ApiCreatedResponse({ type: PickOrderResponseDto })
   create(@Body() dto: CreatePickOrderDto): Promise<PickOrderResponseDto> {
     return this.service.create(dto);
+  }
+
+  @Post(':id/release')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Liberar ordem (reserva quantity_ordered em cada linha no saldo de origem)',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PickOrderResponseDto })
+  release(
+    @Param('id') id: string,
+    @Body() dto: ReleasePickOrderDto,
+  ): Promise<PickOrderResponseDto> {
+    return this.service.releasePickOrder(id, dto);
+  }
+
+  @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cancelar ordem (libera reservas pendentes quando aplicável)',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PickOrderResponseDto })
+  cancel(
+    @Param('id') id: string,
+    @Body() dto: CancelPickOrderDto,
+  ): Promise<PickOrderResponseDto> {
+    return this.service.cancelPickOrder(id, dto);
   }
 }

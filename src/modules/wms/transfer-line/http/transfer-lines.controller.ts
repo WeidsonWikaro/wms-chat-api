@@ -17,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
+  ConfirmTransferLineDto,
   CreateTransferLineDto,
   TransferLineResponseDto,
 } from './dto/transfer-line.dto';
@@ -53,5 +54,19 @@ export class TransferLinesController {
   @ApiCreatedResponse({ type: TransferLineResponseDto })
   create(@Body() dto: CreateTransferLineDto): Promise<TransferLineResponseDto> {
     return this.service.create(dto);
+  }
+
+  @Post(':id/confirm')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Confirmar execução da linha (movimenta saldo origem → destino)',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: TransferLineResponseDto })
+  confirm(
+    @Param('id') id: string,
+    @Body() dto: ConfirmTransferLineDto,
+  ): Promise<TransferLineResponseDto> {
+    return this.service.confirmTransferLine(id, dto);
   }
 }

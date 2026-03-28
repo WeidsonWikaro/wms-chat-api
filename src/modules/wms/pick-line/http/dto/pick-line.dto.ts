@@ -22,6 +22,15 @@ export class CreatePickLineDto {
   @IsUUID('4')
   sourceLocationId?: string | null;
 
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description: 'HU de origem quando há vários saldos no mesmo local',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  sourceHandlingUnitId?: string | null;
+
   @ApiPropertyOptional({ enum: PickLineStatus, default: PickLineStatus.OPEN })
   @IsOptional()
   @IsEnum(PickLineStatus)
@@ -47,6 +56,9 @@ export class PickLineResponseDto {
   @ApiProperty({ nullable: true })
   sourceLocationId!: string | null;
 
+  @ApiProperty({ nullable: true })
+  sourceHandlingUnitId!: string | null;
+
   @ApiProperty({ enum: PickLineStatus })
   status!: PickLineStatus;
 
@@ -61,4 +73,19 @@ export class PickLineResponseDto {
 
   @ApiProperty()
   updatedAt!: string;
+}
+
+export class ConfirmPickLineDto {
+  @ApiProperty({
+    minimum: 1,
+    description: 'Quantidade a confirmar nesta operação (incremento)',
+  })
+  @IsInt()
+  @Min(1)
+  @Max(2_000_000_000)
+  quantityDelta!: number;
+
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID('4')
+  pickedByUserId!: string;
 }

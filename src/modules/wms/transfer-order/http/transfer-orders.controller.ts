@@ -17,7 +17,9 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
+  CancelTransferOrderDto,
   CreateTransferOrderDto,
+  ReleaseTransferOrderDto,
   TransferOrderResponseDto,
 } from './dto/transfer-order.dto';
 import { TransferOrdersService } from './transfer-orders.service';
@@ -55,5 +57,35 @@ export class TransferOrdersController {
     @Body() dto: CreateTransferOrderDto,
   ): Promise<TransferOrderResponseDto> {
     return this.service.create(dto);
+  }
+
+  @Post(':id/release')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Liberar transferência (reserva na origem para cada linha em aberto)',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: TransferOrderResponseDto })
+  release(
+    @Param('id') id: string,
+    @Body() dto: ReleaseTransferOrderDto,
+  ): Promise<TransferOrderResponseDto> {
+    return this.service.releaseTransferOrder(id, dto);
+  }
+
+  @Post(':id/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Cancelar transferência em rascunho ou liberada (libera reservas na origem)',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: TransferOrderResponseDto })
+  cancel(
+    @Param('id') id: string,
+    @Body() dto: CancelTransferOrderDto,
+  ): Promise<TransferOrderResponseDto> {
+    return this.service.cancelTransferOrder(id, dto);
   }
 }

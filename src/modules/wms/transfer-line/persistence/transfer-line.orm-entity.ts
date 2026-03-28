@@ -69,8 +69,8 @@ export class TransferLineOrmEntity {
   @JoinColumn({ name: 'toHandlingUnitId' })
   toHandlingUnit!: HandlingUnitOrmEntity | null;
 
-  @Column({ type: 'varchar', length: 32, nullable: true })
-  status!: TransferLineStatus | null;
+  @Column({ type: 'varchar', length: 32, default: TransferLineStatus.OPEN })
+  status!: TransferLineStatus;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

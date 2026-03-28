@@ -43,6 +43,25 @@ export class CreatePickOrderDto {
   priority?: number | null;
 }
 
+export class ReleasePickOrderDto {
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Utilizador que libera a ordem para o chão',
+  })
+  @IsUUID('4')
+  releasedByUserId!: string;
+}
+
+export class CancelPickOrderDto {
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Utilizador que cancela (auditoria)',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  cancelledByUserId?: string;
+}
+
 export class PickOrderResponseDto {
   @ApiProperty()
   id!: string;

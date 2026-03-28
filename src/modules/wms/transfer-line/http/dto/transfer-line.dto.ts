@@ -41,7 +41,7 @@ export class CreateTransferLineDto {
   })
   @IsOptional()
   @IsEnum(TransferLineStatus)
-  status?: TransferLineStatus | null;
+  status?: TransferLineStatus;
 }
 
 export class TransferLineResponseDto {
@@ -69,12 +69,21 @@ export class TransferLineResponseDto {
   @ApiProperty({ nullable: true })
   toHandlingUnitId!: string | null;
 
-  @ApiProperty({ nullable: true, enum: TransferLineStatus })
-  status!: TransferLineStatus | null;
+  @ApiProperty({ enum: TransferLineStatus })
+  status!: TransferLineStatus;
 
   @ApiProperty()
   createdAt!: string;
 
   @ApiProperty()
   updatedAt!: string;
+}
+
+export class ConfirmTransferLineDto {
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Utilizador que confirma a execução da linha',
+  })
+  @IsUUID('4')
+  executedByUserId!: string;
 }

@@ -7,30 +7,35 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { TransferOrderStatus } from '../../shared/domain/wms.enums';
+import { GoodsReceiptStatus } from '../../shared/domain/wms.enums';
+import { LocationOrmEntity } from '../../location/persistence/location.orm-entity';
 import { WarehouseOrmEntity } from '../../warehouse/persistence/warehouse.orm-entity';
 import { WmsUserOrmEntity } from '../../wms-user/persistence/wms-user.orm-entity';
 
-@Entity({ name: 'transfer_orders' })
-export class TransferOrderOrmEntity {
+@Entity({ name: 'goods_receipts' })
+export class GoodsReceiptOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ type: 'varchar', length: 64, unique: true })
   referenceCode!: string;
 
-  @Column({ type: 'uuid', nullable: true })
-  warehouseId!: string | null;
+  @Column({ type: 'uuid' })
+  warehouseId!: string;
 
-  @ManyToOne(() => WarehouseOrmEntity, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
+  @ManyToOne(() => WarehouseOrmEntity, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'warehouseId' })
-  warehouse!: WarehouseOrmEntity | null;
+  warehouse!: WarehouseOrmEntity;
+
+  @Column({ type: 'uuid' })
+  receivingLocationId!: string;
+
+  @ManyToOne(() => LocationOrmEntity, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'receivingLocationId' })
+  receivingLocation!: LocationOrmEntity;
 
   @Column({ type: 'varchar', length: 32 })
-  status!: TransferOrderStatus;
+  status!: GoodsReceiptStatus;
 
   @Column({ type: 'uuid' })
   createdByUserId!: string;
@@ -40,30 +45,17 @@ export class TransferOrderOrmEntity {
   createdByUser!: WmsUserOrmEntity;
 
   @Column({ type: 'uuid', nullable: true })
-  releasedByUserId!: string | null;
+  postedByUserId!: string | null;
 
   @ManyToOne(() => WmsUserOrmEntity, {
     nullable: true,
     onDelete: 'SET NULL',
   })
-  @JoinColumn({ name: 'releasedByUserId' })
-  releasedByUser!: WmsUserOrmEntity | null;
+  @JoinColumn({ name: 'postedByUserId' })
+  postedByUser!: WmsUserOrmEntity | null;
 
   @Column({ type: 'timestamptz', nullable: true })
-  releasedAt!: Date | null;
-
-  @Column({ type: 'uuid', nullable: true })
-  completedByUserId!: string | null;
-
-  @ManyToOne(() => WmsUserOrmEntity, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'completedByUserId' })
-  completedByUser!: WmsUserOrmEntity | null;
-
-  @Column({ type: 'timestamptz', nullable: true })
-  completedAt!: Date | null;
+  postedAt!: Date | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

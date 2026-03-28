@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { HandlingUnitOrmEntity } from '../../handling-unit/persistence/handling-unit.orm-entity';
 import { LocationOrmEntity } from '../../location/persistence/location.orm-entity';
 import { PickOrderOrmEntity } from '../../pick-order/persistence/pick-order.orm-entity';
 import { ProductOrmEntity } from '../../products/persistence/product.orm-entity';
@@ -47,6 +48,16 @@ export class PickLineOrmEntity {
   })
   @JoinColumn({ name: 'sourceLocationId' })
   sourceLocation!: LocationOrmEntity | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  sourceHandlingUnitId!: string | null;
+
+  @ManyToOne(() => HandlingUnitOrmEntity, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'sourceHandlingUnitId' })
+  sourceHandlingUnit!: HandlingUnitOrmEntity | null;
 
   @Column({ type: 'varchar', length: 32 })
   status!: PickLineStatus;

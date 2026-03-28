@@ -37,6 +37,7 @@ export enum PickLineStatus {
 
 export enum TransferOrderStatus {
   DRAFT = 'DRAFT',
+  RELEASED = 'RELEASED',
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
@@ -45,4 +46,22 @@ export enum TransferOrderStatus {
 export enum TransferLineStatus {
   OPEN = 'OPEN',
   DONE = 'DONE',
+}
+
+export enum GoodsReceiptStatus {
+  DRAFT = 'DRAFT',
+  POSTED = 'POSTED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum CycleCountTaskStatus {
+  OPEN = 'OPEN',
+  COUNTING = 'COUNTING',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum PickWaveStatus {
+  DRAFT = 'DRAFT',
+  RELEASED = 'RELEASED',
 }

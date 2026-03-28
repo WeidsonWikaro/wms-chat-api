@@ -74,11 +74,12 @@ Isto é **independente** do estado do cabeçalho: o **PickOrder** só vai a `PIC
 | Valor | Significado |
 |--------|-------------|
 | **`DRAFT`** | Documento **a ser montado**: linhas podem mudar; **nenhum** movimento de stock deve estar aplicado ainda (ou só simulação). |
+| **`RELEASED`** | Documento **liberado**: stock **reservado** na origem para as linhas em `OPEN` (campo `quantity_reserved` no saldo). |
 | **`IN_PROGRESS`** | Transferência **a ser executada**: pelo menos uma linha foi **iniciada** ou **concluída**; o stock pode já ter sido alterado parcialmente. |
 | **`COMPLETED`** | **Todas** as linhas foram **executadas** e os saldos (**InventoryBalance**) estão alinhados com o documento. |
 | **`CANCELLED`** | Documento **anulado**. Se já houvesse movimentos parciais, a implementação tem de decidir: **reverter** movimentos ou bloquear cancelamento após `IN_PROGRESS` — convém fixar uma regra simples na simulação. |
 
-**Fluxo típico:** `DRAFT` → `IN_PROGRESS` → `COMPLETED`.
+**Fluxo típico:** `DRAFT` → `RELEASED` (reserva) → `IN_PROGRESS` (primeira linha confirmada) → `COMPLETED`. Cancelamento permitido em `DRAFT` ou `RELEASED` (liberta reservas); em `IN_PROGRESS` com linhas já executadas o cancelamento está bloqueado (sem estorno automático nesta simulação).
 
 ---
 
@@ -246,6 +247,7 @@ Só faz sentido se quiseres **concluir linha a linha**; caso contrário podes in
 | `quantity_ordered` | O que foi pedido. |
 | `quantity_picked` | O que já foi confirmado (0 no início). |
 | `source_location_id` | FK → **Location**, nullable — sugestão de onde apanhar. |
+| `source_handling_unit_id` | FK → **HandlingUnit**, nullable — quando há vários saldos no mesmo local para o mesmo SKU. |
 | `status` | Valores: `OPEN`, `PARTIAL`, `DONE`. Ver **Estados (`status`) → PickLine**. |
 | `picked_by_user_id` | FK → **User**, nullable até confirmar pick da linha. |
 | `picked_at` | Momento da confirmação do pick desta linha. |
@@ -264,8 +266,10 @@ Só faz sentido se quiseres **concluir linha a linha**; caso contrário podes in
 | `id` | PK. |
 | `reference_code` | Código único do documento (ex. `TRF-2026-0001`). |
 | `warehouse_id` | FK → **Warehouse**, opcional se tudo for inferido pelas linhas. |
-| `status` | Valores: `DRAFT`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`. Ver **Estados (`status`) → TransferOrder**. |
+| `status` | Valores: `DRAFT`, `RELEASED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`. Ver **Estados (`status`) → TransferOrder**. |
 | `created_by_user_id` | FK → **User**. |
+| `released_by_user_id` | FK → **User**, nullable — quem liberou (reserva na origem). |
+| `released_at` | Quando foi liberada. |
 | `completed_by_user_id` | FK → **User**, nullable até concluir. |
 | `completed_at` | Quando a transferência foi fechada. |
 | `created_at` / `updated_at` | Auditoria. |
@@ -305,10 +309,51 @@ Só faz sentido se quiseres **concluir linha a linha**; caso contrário podes in
 
 ---
 
+## Novas entidades (funcionalidades operacionais)
+
+### InventoryAdjustment
+
+Registo de **ajuste** de inventário com **motivo** e rastreio do utilizador: `product_id`, `location_id`, `handling_unit_id` (opcional), `quantity_delta` (positivo ou negativo), `reason`, `created_by_user_id`, `created_at`. Aplica-se ao saldo via serviço partilhado (`InventoryStockService`).
+
+### GoodsReceipt + GoodsReceiptLine
+
+**Recebimento simples:** cabeçalho com `reference_code`, `warehouse_id`, `receiving_location_id`, `status` (`DRAFT` / `POSTED` / `CANCELLED`), utilizador de criação e de lançamento. Linhas com `product_id` e `quantity`. O **lançamento** incrementa `quantity_on_hand` no local de recebimento (sem HU, saldo agregado por produto/local).
+
+### CycleCountTask + CycleCountLine
+
+**Contagem cíclica:** tarefa por `warehouse_id` e opcionalmente `zone_id`; linhas com snapshot `quantity_expected` (do saldo na inclusão), `quantityCounted` após submissão. **Pós-contagem:** gera `InventoryAdjustment` por diferença e conclui a tarefa.
+
+### PickWave + PickWavePickOrder
+
+**Onda de picking:** `code`, `priority`, `status` (`DRAFT` / `RELEASED`). Associação a **PickOrder** com `sort_order`. Na **liberação da onda**, as ordens associadas recebem `priority` sequencial a partir da prioridade da onda (priorização simples).
+
+### Integrações (stub)
+
+Endpoint de **status** das integrações externas (ERP, transporte, etiquetas, leitores) — contratos reservados para evolução; sem chamadas reais a terceiros.
+
+---
+
+## API REST (resumo dos fluxos)
+
+| Fluxo | Endpoints principais |
+|--------|----------------------|
+| Reserva picking | `POST /api/pick-orders/:id/release` |
+| Cancelar picking | `POST /api/pick-orders/:id/cancel` |
+| Confirmar pick | `POST /api/pick-lines/:id/confirm-pick` |
+| Reserva transferência | `POST /api/transfer-orders/:id/release` |
+| Cancelar transferência | `POST /api/transfer-orders/:id/cancel` |
+| Confirmar transferência | `POST /api/transfer-lines/:id/confirm` |
+| Ajuste inventário | `POST /api/inventory-adjustments` |
+| Recebimento | `POST /api/goods-receipts`, `POST .../lines`, `POST .../post` |
+| Putaway | `POST /api/putaway/suggest` |
+| Contagem cíclica | `POST /api/cycle-count-tasks`, `.../lines`, `.../submit-counts`, `.../post-adjustments` |
+| Ondas | `POST /api/pick-waves`, `.../orders`, `.../release` |
+| Integrações | `GET /api/integrations/status` |
+
+---
+
 ## Próximo passo
 
-**Feito:** entidades TypeORM, relações e `synchronize` (via `DB_SYNC`). **Utilizador WMS:** tabela `wms_users` (evita colisão com futuras tabelas de autenticação).
+**Feito:** serviços e endpoints que confirmam pick/transferência, reservam stock, ajustes com motivo, recebimento, putaway heurístico, contagem cíclica, ondas e stub de integrações.
 
-**A seguir (opcional):** serviços e endpoints REST que ao **confirmar** pick/transferência atualizem **InventoryBalance** e preencham os `*_user_id` conforme o utilizador da simulação; migrações explícitas em produção em vez de `synchronize`.
-
-Se quiseres ajustar nomes de `status`, `zone_type` ou campos opcionais antes de codar, é a altura ideal.
+**Produção:** preferir **migrações** explícitas em vez de `synchronize`; reforçar autenticação e travas pessimistas onde houver concorrência alta.
