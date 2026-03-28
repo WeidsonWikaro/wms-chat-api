@@ -7,6 +7,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { TransferLineResponseDto } from '../../../transfer-line/http/dto/transfer-line.dto';
 import { TransferOrderStatus } from '../../../shared/domain/wms.enums';
 
 export class CreateTransferOrderDto {
@@ -86,4 +87,12 @@ export class TransferOrderResponseDto {
 
   @ApiProperty()
   updatedAt!: string;
+}
+
+export class TransferOrderDetailResponseDto {
+  @ApiProperty({ type: TransferOrderResponseDto })
+  order!: TransferOrderResponseDto;
+
+  @ApiProperty({ type: [TransferLineResponseDto] })
+  lines!: TransferLineResponseDto[];
 }

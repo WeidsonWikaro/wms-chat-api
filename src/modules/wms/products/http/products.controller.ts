@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -16,6 +17,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -39,18 +41,40 @@ const PRODUCT_RESPONSE_EXAMPLE: ProductResponseDto = {
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  @Get('by-barcode')
+  @ApiOperation({
+    summary: 'Obter produto pelo código de barras (exato)',
+  })
+  @ApiQuery({
+    name: 'barcode',
+    required: true,
+    description: 'Código de barras',
+  })
+  @ApiOkResponse({ type: ProductResponseDto })
+  findByBarcode(
+    @Query('barcode') barcode: string,
+  ): Promise<ProductResponseDto> {
+    return this.productsService.findByBarcode(barcode);
+  }
+
   @Get()
   @ApiOperation({
-    summary: 'List all products',
-    description: 'No request body. Returns a JSON array of products.',
+    summary: 'Listar produtos',
+    description:
+      'Query opcional `q`: busca por nome ou descrição (ILIKE). Sem `q`, retorna todos.',
+  })
+  @ApiQuery({
+    name: 'q',
+    required: false,
+    description: 'Texto para buscar em nome ou descrição',
   })
   @ApiOkResponse({
     type: ProductResponseDto,
     isArray: true,
     example: [PRODUCT_RESPONSE_EXAMPLE],
   })
-  findAll() {
-    return this.productsService.findAll();
+  findAll(@Query('q') q?: string): Promise<ProductResponseDto[]> {
+    return this.productsService.findAll({ q });
   }
 
   @Get(':id')

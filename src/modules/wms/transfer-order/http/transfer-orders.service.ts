@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { TransferLinesService } from '../../transfer-line/http/transfer-lines.service';
 import { TransferLineOrmEntity } from '../../transfer-line/persistence/transfer-line.orm-entity';
 import { TransferOrderOrmEntity } from '../persistence/transfer-order.orm-entity';
 import {
@@ -17,8 +18,10 @@ import {
   CancelTransferOrderDto,
   CreateTransferOrderDto,
   ReleaseTransferOrderDto,
+  TransferOrderDetailResponseDto,
   TransferOrderResponseDto,
 } from './dto/transfer-order.dto';
+import { sanitizeIlikeFragment } from '../../shared/http/search-like.util';
 import { rethrowDbError } from '../../shared/http/query-failed.util';
 
 @Injectable()
@@ -28,6 +31,7 @@ export class TransferOrdersService {
     private readonly repo: Repository<TransferOrderOrmEntity>,
     @InjectRepository(TransferLineOrmEntity)
     private readonly transferLines: Repository<TransferLineOrmEntity>,
+    private readonly transferLinesService: TransferLinesService,
     private readonly dataSource: DataSource,
     private readonly inventoryStock: InventoryStockService,
   ) {}
@@ -48,12 +52,55 @@ export class TransferOrdersService {
     };
   }
 
-  async findAll(warehouseId?: string): Promise<TransferOrderResponseDto[]> {
-    const rows = await this.repo.find({
-      where: warehouseId ? { warehouseId } : {},
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(filters?: {
+    warehouseId?: string;
+    status?: TransferOrderStatus;
+    referenceCode?: string;
+    completedByUserId?: string;
+  }): Promise<TransferOrderResponseDto[]> {
+    const qb = this.repo.createQueryBuilder('o');
+    if (filters?.warehouseId) {
+      qb.andWhere('o.warehouseId = :wid', { wid: filters.warehouseId });
+    }
+    if (filters?.status) {
+      qb.andWhere('o.status = :st', { st: filters.status });
+    }
+    if (filters?.referenceCode?.trim()) {
+      const safe = sanitizeIlikeFragment(filters.referenceCode);
+      if (safe) {
+        qb.andWhere('o.referenceCode ILIKE :rc', { rc: `%${safe}%` });
+      }
+    }
+    if (filters?.completedByUserId) {
+      qb.andWhere('o.completedByUserId = :cb', {
+        cb: filters.completedByUserId,
+      });
+    }
+    qb.orderBy('o.createdAt', 'DESC');
+    const rows = await qb.getMany();
     return rows.map((r) => this.map(r));
+  }
+
+  async findOneByReference(
+    referenceCode: string,
+  ): Promise<TransferOrderDetailResponseDto> {
+    const trimmed = referenceCode.trim();
+    if (!trimmed) {
+      throw new BadRequestException('Parâmetro referenceCode é obrigatório.');
+    }
+    const row = await this.repo.findOne({ where: { referenceCode: trimmed } });
+    if (!row) {
+      throw new NotFoundException(
+        `Transferência com código ${trimmed} não encontrada`,
+      );
+    }
+    return this.findDetail(row.id);
+  }
+
+  async findDetail(id: string): Promise<TransferOrderDetailResponseDto> {
+    const order = await this.findOne(id);
+    const lines = await this.transferLinesService.findAll(id);
+    return { order, lines };
   }
 
   async findOne(id: string): Promise<TransferOrderResponseDto> {

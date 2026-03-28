@@ -70,6 +70,30 @@ export class InventoryBalanceResponseDto {
   @ApiProperty()
   quantityReserved!: number;
 
+  @ApiProperty({
+    description: 'Disponível para novas reservas: on_hand - reserved',
+  })
+  quantityAvailable!: number;
+
   @ApiProperty()
   updatedAt!: string;
+}
+
+export class ProductInventorySummaryDto {
+  @ApiProperty({ format: 'uuid' })
+  productId!: string;
+
+  @ApiProperty({
+    description: 'Soma de (on_hand - reserved) em todas as linhas do produto',
+  })
+  totalQuantityAvailable!: number;
+
+  @ApiProperty()
+  totalQuantityOnHand!: number;
+
+  @ApiProperty()
+  totalQuantityReserved!: number;
+
+  @ApiProperty({ type: [InventoryBalanceResponseDto] })
+  balances!: InventoryBalanceResponseDto[];
 }

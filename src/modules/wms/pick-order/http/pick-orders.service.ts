@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import { PickLinesService } from '../../pick-line/http/pick-lines.service';
 import { PickLineOrmEntity } from '../../pick-line/persistence/pick-line.orm-entity';
 import { PickOrderOrmEntity } from '../persistence/pick-order.orm-entity';
 import { PickOrderStatus } from '../../shared/domain/wms.enums';
@@ -13,9 +14,11 @@ import { toIso } from '../../shared/http/date.util';
 import {
   CancelPickOrderDto,
   CreatePickOrderDto,
+  PickOrderDetailResponseDto,
   PickOrderResponseDto,
   ReleasePickOrderDto,
 } from './dto/pick-order.dto';
+import { sanitizeIlikeFragment } from '../../shared/http/search-like.util';
 import { rethrowDbError } from '../../shared/http/query-failed.util';
 
 @Injectable()
@@ -25,6 +28,7 @@ export class PickOrdersService {
     private readonly repo: Repository<PickOrderOrmEntity>,
     @InjectRepository(PickLineOrmEntity)
     private readonly pickLines: Repository<PickLineOrmEntity>,
+    private readonly pickLinesService: PickLinesService,
     private readonly dataSource: DataSource,
     private readonly inventoryStock: InventoryStockService,
   ) {}
@@ -46,12 +50,55 @@ export class PickOrdersService {
     };
   }
 
-  async findAll(warehouseId?: string): Promise<PickOrderResponseDto[]> {
-    const rows = await this.repo.find({
-      where: warehouseId ? { warehouseId } : {},
-      order: { createdAt: 'DESC' },
-    });
+  async findAll(filters?: {
+    warehouseId?: string;
+    status?: PickOrderStatus;
+    orderNumber?: string;
+    completedByUserId?: string;
+  }): Promise<PickOrderResponseDto[]> {
+    const qb = this.repo.createQueryBuilder('o');
+    if (filters?.warehouseId) {
+      qb.andWhere('o.warehouseId = :wid', { wid: filters.warehouseId });
+    }
+    if (filters?.status) {
+      qb.andWhere('o.status = :st', { st: filters.status });
+    }
+    if (filters?.orderNumber?.trim()) {
+      const safe = sanitizeIlikeFragment(filters.orderNumber);
+      if (safe) {
+        qb.andWhere('o.orderNumber ILIKE :on', { on: `%${safe}%` });
+      }
+    }
+    if (filters?.completedByUserId) {
+      qb.andWhere('o.completedByUserId = :cb', {
+        cb: filters.completedByUserId,
+      });
+    }
+    qb.orderBy('o.createdAt', 'DESC');
+    const rows = await qb.getMany();
     return rows.map((r) => this.map(r));
+  }
+
+  async findOneByOrderNumber(
+    orderNumber: string,
+  ): Promise<PickOrderDetailResponseDto> {
+    const trimmed = orderNumber.trim();
+    if (!trimmed) {
+      throw new BadRequestException('Parâmetro orderNumber é obrigatório.');
+    }
+    const row = await this.repo.findOne({ where: { orderNumber: trimmed } });
+    if (!row) {
+      throw new NotFoundException(
+        `Ordem de picking com número ${trimmed} não encontrada`,
+      );
+    }
+    return this.findDetail(row.id);
+  }
+
+  async findDetail(id: string): Promise<PickOrderDetailResponseDto> {
+    const order = await this.findOne(id);
+    const lines = await this.pickLinesService.findAll(id);
+    return { order, lines };
   }
 
   async findOne(id: string): Promise<PickOrderResponseDto> {

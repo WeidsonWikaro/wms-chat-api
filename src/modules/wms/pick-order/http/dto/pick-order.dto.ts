@@ -10,6 +10,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { PickLineResponseDto } from '../../../pick-line/http/dto/pick-line.dto';
 import { PickOrderStatus } from '../../../shared/domain/wms.enums';
 
 export class CreatePickOrderDto {
@@ -98,4 +99,12 @@ export class PickOrderResponseDto {
 
   @ApiProperty()
   updatedAt!: string;
+}
+
+export class PickOrderDetailResponseDto {
+  @ApiProperty({ type: PickOrderResponseDto })
+  order!: PickOrderResponseDto;
+
+  @ApiProperty({ type: [PickLineResponseDto] })
+  lines!: PickLineResponseDto[];
 }

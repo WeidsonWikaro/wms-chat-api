@@ -22,6 +22,7 @@ import {
 import {
   CreateInventoryBalanceDto,
   InventoryBalanceResponseDto,
+  ProductInventorySummaryDto,
   UpdateInventoryBalanceDto,
 } from './dto/inventory-balance.dto';
 import { InventoryBalancesService } from './inventory-balances.service';
@@ -30,6 +31,19 @@ import { InventoryBalancesService } from './inventory-balances.service';
 @Controller('inventory-balances')
 export class InventoryBalancesController {
   constructor(private readonly service: InventoryBalancesService) {}
+
+  @Get('summary-by-product')
+  @ApiOperation({
+    summary:
+      'Resumo de estoque por produto (totais e detalhe por local/HU, com disponível)',
+  })
+  @ApiQuery({ name: 'productId', required: true, format: 'uuid' })
+  @ApiOkResponse({ type: ProductInventorySummaryDto })
+  summaryByProduct(
+    @Query('productId') productId: string,
+  ): Promise<ProductInventorySummaryDto> {
+    return this.service.findProductSummary(productId);
+  }
 
   @Get()
   @ApiOperation({

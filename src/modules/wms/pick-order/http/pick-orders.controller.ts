@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseEnumPipe,
   Post,
   Query,
 } from '@nestjs/common';
@@ -16,9 +17,11 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { PickOrderStatus } from '../../shared/domain/wms.enums';
 import {
   CancelPickOrderDto,
   CreatePickOrderDto,
+  PickOrderDetailResponseDto,
   PickOrderResponseDto,
   ReleasePickOrderDto,
 } from './dto/pick-order.dto';
@@ -29,18 +32,65 @@ import { PickOrdersService } from './pick-orders.service';
 export class PickOrdersController {
   constructor(private readonly service: PickOrdersService) {}
 
+  @Get('by-order-number')
+  @ApiOperation({
+    summary:
+      'Obter ordem de picking por número (código) com linhas (produtos e quantidades)',
+  })
+  @ApiQuery({ name: 'orderNumber', required: true })
+  @ApiOkResponse({ type: PickOrderDetailResponseDto })
+  findByOrderNumber(
+    @Query('orderNumber') orderNumber: string,
+  ): Promise<PickOrderDetailResponseDto> {
+    return this.service.findOneByOrderNumber(orderNumber);
+  }
+
   @Get()
-  @ApiOperation({ summary: 'Listar ordens de picking (opcional: warehouseId)' })
+  @ApiOperation({
+    summary:
+      'Listar ordens de picking (warehouseId, status, orderNumber parcial, completedByUserId)',
+  })
   @ApiQuery({ name: 'warehouseId', required: false, format: 'uuid' })
+  @ApiQuery({ name: 'status', required: false, enum: PickOrderStatus })
+  @ApiQuery({
+    name: 'orderNumber',
+    required: false,
+    description: 'Busca parcial (ILIKE) no número da ordem',
+  })
+  @ApiQuery({
+    name: 'completedByUserId',
+    required: false,
+    format: 'uuid',
+    description: 'Filtrar ordens concluídas por este utilizador',
+  })
   @ApiOkResponse({ type: PickOrderResponseDto, isArray: true })
   findAll(
     @Query('warehouseId') warehouseId?: string,
+    @Query('status', new ParseEnumPipe(PickOrderStatus, { optional: true }))
+    status?: PickOrderStatus,
+    @Query('orderNumber') orderNumber?: string,
+    @Query('completedByUserId') completedByUserId?: string,
   ): Promise<PickOrderResponseDto[]> {
-    return this.service.findAll(warehouseId);
+    return this.service.findAll({
+      warehouseId,
+      status,
+      orderNumber,
+      completedByUserId,
+    });
+  }
+
+  @Get(':id/detail')
+  @ApiOperation({
+    summary: 'Ordem de picking com linhas (produtos e quantidades)',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: PickOrderDetailResponseDto })
+  findDetail(@Param('id') id: string): Promise<PickOrderDetailResponseDto> {
+    return this.service.findDetail(id);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obter ordem de picking por id' })
+  @ApiOperation({ summary: 'Obter ordem de picking por id (cabeçalho)' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: PickOrderResponseDto })
   findOne(@Param('id') id: string): Promise<PickOrderResponseDto> {

@@ -6,6 +6,7 @@ import { toIso } from '../../shared/http/date.util';
 import {
   CreateInventoryBalanceDto,
   InventoryBalanceResponseDto,
+  ProductInventorySummaryDto,
   UpdateInventoryBalanceDto,
 } from './dto/inventory-balance.dto';
 import { rethrowDbError } from '../../shared/http/query-failed.util';
@@ -25,7 +26,30 @@ export class InventoryBalancesService {
       handlingUnitId: e.handlingUnitId,
       quantityOnHand: e.quantityOnHand,
       quantityReserved: e.quantityReserved,
+      quantityAvailable: e.quantityOnHand - e.quantityReserved,
       updatedAt: toIso(e.updatedAt),
+    };
+  }
+
+  async findProductSummary(
+    productId: string,
+  ): Promise<ProductInventorySummaryDto> {
+    const rows = await this.repo.find({
+      where: { productId },
+      order: { updatedAt: 'DESC' },
+    });
+    let totalOnHand = 0;
+    let totalReserved = 0;
+    for (const r of rows) {
+      totalOnHand += r.quantityOnHand;
+      totalReserved += r.quantityReserved;
+    }
+    return {
+      productId,
+      totalQuantityAvailable: totalOnHand - totalReserved,
+      totalQuantityOnHand: totalOnHand,
+      totalQuantityReserved: totalReserved,
+      balances: rows.map((row) => this.map(row)),
     };
   }
 

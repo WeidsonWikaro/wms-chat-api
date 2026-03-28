@@ -7,6 +7,7 @@ import type {
   IProductsRepository,
   UpdateProductPayload,
 } from '../products.repository.interface';
+import { sanitizeIlikeFragment } from '../../shared/http/search-like.util';
 import { ProductOrmEntity } from './product.orm-entity';
 
 function toDomain(row: ProductOrmEntity): Product {
@@ -37,6 +38,29 @@ export class TypeormProductsRepository implements IProductsRepository {
   async findById(id: string): Promise<Product | null> {
     const row = await this.repo.findOne({ where: { id } });
     return row ? toDomain(row) : null;
+  }
+
+  async findByBarcode(barcode: string): Promise<Product | null> {
+    const trimmed = barcode.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const row = await this.repo.findOne({ where: { barcode: trimmed } });
+    return row ? toDomain(row) : null;
+  }
+
+  async searchByNameOrDescription(searchTerm: string): Promise<Product[]> {
+    const safe = sanitizeIlikeFragment(searchTerm);
+    if (!safe) {
+      return this.findAll();
+    }
+    const like = `%${safe}%`;
+    const rows = await this.repo
+      .createQueryBuilder('p')
+      .where('p.name ILIKE :like OR p.description ILIKE :like', { like })
+      .orderBy('p.name', 'ASC')
+      .getMany();
+    return rows.map(toDomain);
   }
 
   async create(payload: CreateProductPayload): Promise<Product> {

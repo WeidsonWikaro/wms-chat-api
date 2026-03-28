@@ -12,8 +12,21 @@ export class ProductsService {
     private readonly productsRepository: IProductsRepository,
   ) {}
 
-  async findAll(): Promise<Product[]> {
+  async findAll(filters?: { q?: string }): Promise<Product[]> {
+    if (filters?.q !== undefined && filters.q.trim().length > 0) {
+      return this.productsRepository.searchByNameOrDescription(filters.q);
+    }
     return this.productsRepository.findAll();
+  }
+
+  async findByBarcode(barcode: string): Promise<Product> {
+    const product = await this.productsRepository.findByBarcode(barcode);
+    if (!product) {
+      throw new NotFoundException(
+        'Produto com este código de barras não foi encontrado',
+      );
+    }
+    return product;
   }
 
   async findOne(id: string): Promise<Product> {

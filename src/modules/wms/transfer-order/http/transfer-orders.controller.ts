@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseEnumPipe,
   Post,
   Query,
 } from '@nestjs/common';
@@ -16,10 +17,12 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { TransferOrderStatus } from '../../shared/domain/wms.enums';
 import {
   CancelTransferOrderDto,
   CreateTransferOrderDto,
   ReleaseTransferOrderDto,
+  TransferOrderDetailResponseDto,
   TransferOrderResponseDto,
 } from './dto/transfer-order.dto';
 import { TransferOrdersService } from './transfer-orders.service';
@@ -29,20 +32,65 @@ import { TransferOrdersService } from './transfer-orders.service';
 export class TransferOrdersController {
   constructor(private readonly service: TransferOrdersService) {}
 
+  @Get('by-reference')
+  @ApiOperation({
+    summary:
+      'Obter transferência por código de referência com linhas (produtos e quantidades)',
+  })
+  @ApiQuery({ name: 'referenceCode', required: true })
+  @ApiOkResponse({ type: TransferOrderDetailResponseDto })
+  findByReference(
+    @Query('referenceCode') referenceCode: string,
+  ): Promise<TransferOrderDetailResponseDto> {
+    return this.service.findOneByReference(referenceCode);
+  }
+
   @Get()
   @ApiOperation({
-    summary: 'Listar ordens de transferência (opcional: warehouseId)',
+    summary:
+      'Listar ordens de transferência (warehouseId, status, referenceCode parcial, completedByUserId)',
   })
   @ApiQuery({ name: 'warehouseId', required: false, format: 'uuid' })
+  @ApiQuery({ name: 'status', required: false, enum: TransferOrderStatus })
+  @ApiQuery({
+    name: 'referenceCode',
+    required: false,
+    description: 'Busca parcial (ILIKE) no código de referência',
+  })
+  @ApiQuery({
+    name: 'completedByUserId',
+    required: false,
+    format: 'uuid',
+    description: 'Filtrar transferências concluídas por este utilizador',
+  })
   @ApiOkResponse({ type: TransferOrderResponseDto, isArray: true })
   findAll(
     @Query('warehouseId') warehouseId?: string,
+    @Query('status', new ParseEnumPipe(TransferOrderStatus, { optional: true }))
+    status?: TransferOrderStatus,
+    @Query('referenceCode') referenceCode?: string,
+    @Query('completedByUserId') completedByUserId?: string,
   ): Promise<TransferOrderResponseDto[]> {
-    return this.service.findAll(warehouseId);
+    return this.service.findAll({
+      warehouseId,
+      status,
+      referenceCode,
+      completedByUserId,
+    });
+  }
+
+  @Get(':id/detail')
+  @ApiOperation({
+    summary: 'Transferência com linhas (produtos e quantidades)',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiOkResponse({ type: TransferOrderDetailResponseDto })
+  findDetail(@Param('id') id: string): Promise<TransferOrderDetailResponseDto> {
+    return this.service.findDetail(id);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obter ordem de transferência por id' })
+  @ApiOperation({ summary: 'Obter transferência por id (cabeçalho)' })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: TransferOrderResponseDto })
   findOne(@Param('id') id: string): Promise<TransferOrderResponseDto> {
