@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { randomUUID } from 'crypto';
 import { DataSource, Repository } from 'typeorm';
 import { HandlingUnitOrmEntity } from '../modules/wms/handling-unit/persistence/handling-unit.orm-entity';
 import { InventoryBalanceOrmEntity } from '../modules/wms/inventory-balance/persistence/inventory-balance.orm-entity';
@@ -22,74 +23,222 @@ import { WarehouseOrmEntity } from '../modules/wms/warehouse/persistence/warehou
 import { WmsUserOrmEntity } from '../modules/wms/wms-user/persistence/wms-user.orm-entity';
 import { ZoneOrmEntity } from '../modules/wms/zone/persistence/zone.orm-entity';
 
-/** UUIDs fixos para rastrear relações em demos e testes. */
-const S = {
-  uAlice: 'a1000000-0000-4000-8000-000000000001',
-  uBob: 'a1000000-0000-4000-8000-000000000002',
-  uCarol: 'a1000000-0000-4000-8000-000000000003',
-  uDaniela: 'a1000000-0000-4000-8000-000000000004',
-  uEduardo: 'a1000000-0000-4000-8000-000000000005',
-  uFernanda: 'a1000000-0000-4000-8000-000000000006',
-  whMain: 'b1000000-0000-4000-8000-000000000001',
-  whSouth: 'b1000000-0000-4000-8000-000000000002',
-  whNorth: 'b1000000-0000-4000-8000-000000000003',
-  whMetro: 'b1000000-0000-4000-8000-000000000004',
-  zStorage: 'c1000000-0000-4000-8000-000000000001',
-  zPicking: 'c1000000-0000-4000-8000-000000000002',
-  zShipping: 'c1000000-0000-4000-8000-000000000003',
-  zMainRecv: 'c1000000-0000-4000-8000-000000000006',
-  zMainStg: 'c1000000-0000-4000-8000-000000000007',
-  zStorageB: 'c1000000-0000-4000-8000-000000000008',
-  zSouthStorage: 'c1000000-0000-4000-8000-000000000004',
-  zSouthRecv: 'c1000000-0000-4000-8000-000000000005',
-  zSouthShip: 'c1000000-0000-4000-8000-000000000009',
-  zSouthPick: 'c1000000-0000-4000-8000-00000000000a',
-  locBulkA: 'd1000000-0000-4000-8000-000000000001',
-  locBulkB: 'd1000000-0000-4000-8000-000000000002',
-  locPick1: 'd1000000-0000-4000-8000-000000000003',
-  locPick2: 'd1000000-0000-4000-8000-000000000004',
-  locDock: 'd1000000-0000-4000-8000-000000000005',
-  locSouthBulk: 'd1000000-0000-4000-8000-000000000006',
-  locRecv01: 'd1000000-0000-4000-8000-000000000007',
-  locStg01: 'd1000000-0000-4000-8000-000000000008',
-  locBulkC: 'd1000000-0000-4000-8000-000000000009',
-  locSouthDock: 'd1000000-0000-4000-8000-00000000000a',
-  locSouthPF: 'd1000000-0000-4000-8000-00000000000b',
-  locNorth1: 'd1000000-0000-4000-8000-00000000000c',
-  locMetro1: 'd1000000-0000-4000-8000-00000000000d',
-  pSkuA: 'e1000000-0000-4000-8000-000000000001',
-  pSkuB: 'e1000000-0000-4000-8000-000000000002',
-  pSkuC: 'e1000000-0000-4000-8000-000000000003',
-  pSkuD: 'e1000000-0000-4000-8000-000000000004',
-  pSkuE: 'e1000000-0000-4000-8000-000000000005',
-  pSkuF: 'e1000000-0000-4000-8000-000000000006',
-  pSkuG: 'e1000000-0000-4000-8000-000000000007',
-  pSkuH: 'e1000000-0000-4000-8000-000000000008',
-  huPallet: 'f1000000-0000-4000-8000-000000000001',
-  huTote: 'f1000000-0000-4000-8000-000000000002',
-  huBlocked: 'f1000000-0000-4000-8000-000000000003',
-  huPallet2: 'f1000000-0000-4000-8000-000000000004',
-  huTote2: 'f1000000-0000-4000-8000-000000000005',
-  huCase2: 'f1000000-0000-4000-8000-000000000006',
-  poDraft: '10100000-0000-4000-8000-000000000001',
-  poReleased: '10100000-0000-4000-8000-000000000002',
-  poPicking: '10100000-0000-4000-8000-000000000003',
-  poPicked: '10100000-0000-4000-8000-000000000004',
-  poCancelled: '10100000-0000-4000-8000-000000000005',
-  poDraftSul: '10100000-0000-4000-8000-000000000006',
-  poReleasedSul: '10100000-0000-4000-8000-000000000007',
-  poPickingSul: '10100000-0000-4000-8000-000000000008',
-  poPickedSul: '10100000-0000-4000-8000-000000000009',
-  poCancelled2: '10100000-0000-4000-8000-00000000000a',
-  toDraft: '20100000-0000-4000-8000-000000000001',
-  toProgress: '20100000-0000-4000-8000-000000000002',
-  toDone: '20100000-0000-4000-8000-000000000003',
-  toDraftSul: '20100000-0000-4000-8000-000000000004',
-  toProgress2: '20100000-0000-4000-8000-000000000005',
-  toDoneSul: '20100000-0000-4000-8000-000000000006',
-  zNorthStor: 'c1000000-0000-4000-8000-00000000000b',
-  zMetroPick: 'c1000000-0000-4000-8000-00000000000c',
-} as const;
+/** Multiplicador de linhas em relação ao seed base (produtos, documentos, etc.). */
+const SEED_ROW_MULTIPLIER = 200;
+
+const SEED_LOCATION_COUNT = 400;
+const SEED_USER_COUNT = 200;
+
+const WAREHOUSE_SEED = [
+  {
+    id: 'b1000000-0000-4000-8000-000000000001',
+    code: 'WH01',
+    name: 'CD Central — São Paulo',
+    active: true,
+  },
+  {
+    id: 'b1000000-0000-4000-8000-000000000002',
+    code: 'WH02',
+    name: 'CD Sul — Curitiba',
+    active: true,
+  },
+  {
+    id: 'b1000000-0000-4000-8000-000000000003',
+    code: 'WH03',
+    name: 'CD Nordeste — Recife',
+    active: true,
+  },
+  {
+    id: 'b1000000-0000-4000-8000-000000000004',
+    code: 'WH04',
+    name: 'Cross-docking — Belo Horizonte',
+    active: true,
+  },
+] as const;
+
+const ZONE_TEMPLATES: ReadonlyArray<{
+  warehouseIndex: number;
+  code: string;
+  name: string;
+  zoneType: ZoneType;
+}> = [
+  { warehouseIndex: 0, code: 'STOR-A', name: 'Armazenagem bloco A', zoneType: ZoneType.STORAGE },
+  { warehouseIndex: 0, code: 'PICK-F', name: 'Separação frente de loja', zoneType: ZoneType.PICKING },
+  { warehouseIndex: 0, code: 'SHIP-1', name: 'Doca de expedição 1', zoneType: ZoneType.SHIPPING },
+  { warehouseIndex: 0, code: 'RCV-01', name: 'Recebimento principal', zoneType: ZoneType.RECEIVING },
+  { warehouseIndex: 0, code: 'STG-01', name: 'Área de consolidação', zoneType: ZoneType.STAGING },
+  { warehouseIndex: 0, code: 'STOR-B', name: 'Armazenagem bloco B', zoneType: ZoneType.STORAGE },
+  { warehouseIndex: 1, code: 'STOR-S', name: 'Armazenagem Sul', zoneType: ZoneType.STORAGE },
+  { warehouseIndex: 1, code: 'RCV-S', name: 'Recebimento Sul', zoneType: ZoneType.RECEIVING },
+  { warehouseIndex: 1, code: 'SHIP-S', name: 'Expedição Sul', zoneType: ZoneType.SHIPPING },
+  { warehouseIndex: 1, code: 'PICK-S', name: 'Separação Sul', zoneType: ZoneType.PICKING },
+  { warehouseIndex: 2, code: 'STOR-N', name: 'Armazenagem Nordeste', zoneType: ZoneType.STORAGE },
+  { warehouseIndex: 3, code: 'PICK-M', name: 'Separação expressa BH', zoneType: ZoneType.PICKING },
+];
+
+const LOCATION_TEMPLATES: ReadonlyArray<{
+  zoneTemplateIndex: number;
+  code: string;
+  aisle: string | null;
+  bay: string | null;
+  level: string | null;
+}> = [
+  { zoneTemplateIndex: 0, code: 'A-01-01', aisle: 'A', bay: '01', level: '01' },
+  { zoneTemplateIndex: 0, code: 'A-01-02', aisle: 'A', bay: '01', level: '02' },
+  { zoneTemplateIndex: 1, code: 'PF-01', aisle: 'PF', bay: '01', level: '1' },
+  { zoneTemplateIndex: 1, code: 'PF-02', aisle: 'PF', bay: '02', level: '1' },
+  { zoneTemplateIndex: 2, code: 'DOCK-01', aisle: 'D', bay: '01', level: null },
+  { zoneTemplateIndex: 6, code: 'S-01-01', aisle: 'S', bay: '01', level: '01' },
+  { zoneTemplateIndex: 4, code: 'RCV-D1', aisle: 'R', bay: '01', level: null },
+  { zoneTemplateIndex: 5, code: 'STG-01', aisle: 'G', bay: '01', level: '1' },
+  { zoneTemplateIndex: 5, code: 'B-02-01', aisle: 'B', bay: '02', level: '01' },
+  { zoneTemplateIndex: 8, code: 'DOCK-S1', aisle: 'DS', bay: '01', level: null },
+  { zoneTemplateIndex: 9, code: 'PFS-01', aisle: 'PS', bay: '01', level: '1' },
+  { zoneTemplateIndex: 10, code: 'N-01-01', aisle: 'N', bay: '01', level: '01' },
+  { zoneTemplateIndex: 11, code: 'M-EXP-01', aisle: 'M', bay: '01', level: '1' },
+];
+
+const PRODUCT_TEMPLATES: ReadonlyArray<{
+  name: string;
+  barcode: string;
+  description: string;
+}> = [
+  {
+    name: 'Caixa de parafusos M6 zincado',
+    barcode: 'SEED-SKU-A',
+    description: 'Fixação em massa; paletizado no CD Central.',
+  },
+  {
+    name: 'Fita adesiva transparente 48 mm x 50 m',
+    barcode: 'SEED-SKU-B',
+    description: 'Embalagem e fechamento de caixas.',
+  },
+  {
+    name: 'Etiquetas térmicas 100 x 150 mm',
+    barcode: 'SEED-SKU-C',
+    description: 'Bobina para impressora de etiquetas de transporte.',
+  },
+  {
+    name: 'Tubo PVC soldável 50 mm',
+    barcode: 'SEED-SKU-D',
+    description: 'Produto volumoso; manuseio com empilhadeira.',
+  },
+  {
+    name: 'Luva de proteção nitrílica tamanho G',
+    barcode: 'SEED-SKU-E',
+    description: 'EPI descartável; lote homologado NR-6.',
+  },
+  {
+    name: 'Caixa de papelão ondulado 40 x 30 x 25 cm',
+    barcode: 'SEED-SKU-F',
+    description: 'Embalagem secundária para e-commerce.',
+  },
+  {
+    name: 'Spray lubrificante multiuso 300 ml',
+    barcode: 'SEED-SKU-G',
+    description: 'Manutenção leve; armazenar longe de calor.',
+  },
+  {
+    name: 'Cinta de poliéster para amarração 50 mm',
+    barcode: 'SEED-SKU-H',
+    description: 'Unitização de paletes na doca.',
+  },
+];
+
+const USER_FIXED_IDS: ReadonlyArray<string> = [
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000002',
+  'a1000000-0000-4000-8000-000000000003',
+  'a1000000-0000-4000-8000-000000000004',
+  'a1000000-0000-4000-8000-000000000005',
+  'a1000000-0000-4000-8000-000000000006',
+];
+
+const USER_DISPLAY_BASE: ReadonlyArray<{ code: string; displayName: string }> = [
+  { code: 'U-ALICE', displayName: 'Alice Silva' },
+  { code: 'U-BOB', displayName: 'Bob Santos' },
+  { code: 'U-CAROL', displayName: 'Carol Oliveira' },
+  { code: 'U-DANIELA', displayName: 'Daniela Lima' },
+  { code: 'U-EDUARDO', displayName: 'Eduardo Ferreira' },
+  { code: 'U-FERNANDA', displayName: 'Fernanda Costa' },
+];
+
+const PRODUCT_FIXED_IDS: ReadonlyArray<string> = [
+  'e1000000-0000-4000-8000-000000000001',
+  'e1000000-0000-4000-8000-000000000002',
+  'e1000000-0000-4000-8000-000000000003',
+  'e1000000-0000-4000-8000-000000000004',
+  'e1000000-0000-4000-8000-000000000005',
+  'e1000000-0000-4000-8000-000000000006',
+  'e1000000-0000-4000-8000-000000000007',
+  'e1000000-0000-4000-8000-000000000008',
+];
+
+const FIRST_NAMES = [
+  'Alice',
+  'Bob',
+  'Carol',
+  'Daniela',
+  'Eduardo',
+  'Fernanda',
+  'Gustavo',
+  'Helena',
+  'Igor',
+  'Julia',
+  'Kevin',
+  'Laura',
+  'Marcos',
+  'Nina',
+  'Otávio',
+  'Paula',
+  'Rafael',
+  'Sofia',
+  'Tiago',
+  'Vitória',
+];
+const LAST_NAMES = [
+  'Silva',
+  'Santos',
+  'Oliveira',
+  'Lima',
+  'Ferreira',
+  'Costa',
+  'Almeida',
+  'Ribeiro',
+  'Pereira',
+  'Rodrigues',
+  'Martins',
+  'Carvalho',
+  'Gomes',
+  'Araújo',
+  'Rocha',
+  'Dias',
+  'Monteiro',
+  'Teixeira',
+  'Nascimento',
+  'Barbosa',
+];
+
+function displayNameForUserIndex(i: number): string {
+  if (i < USER_DISPLAY_BASE.length) {
+    return USER_DISPLAY_BASE[i].displayName;
+  }
+  return `${FIRST_NAMES[i % FIRST_NAMES.length]} ${LAST_NAMES[(Math.floor(i / FIRST_NAMES.length) + i) % LAST_NAMES.length]}`;
+}
+
+function codeForUserIndex(i: number): string {
+  if (i < USER_DISPLAY_BASE.length) {
+    return USER_DISPLAY_BASE[i].code;
+  }
+  return `U-SEED-${String(i).padStart(5, '0')}`;
+}
+
+/** Índice de local ao longo das réplicas (passo = quantidade de templates de local). */
+function locationIndexFor(rep: number, templateSlotIndex: number): number {
+  return (
+    (templateSlotIndex + rep * LOCATION_TEMPLATES.length) % SEED_LOCATION_COUNT
+  );
+}
 
 @Injectable()
 export class DatabaseSeedService {
@@ -125,14 +274,11 @@ export class DatabaseSeedService {
   async run(): Promise<void> {
     this.logger.log('Limpando tabelas WMS + produtos…');
     await this.clearAll();
-    this.logger.log('Inserindo dados de seed…');
+    this.logger.log('Inserindo dados de seed (volume ampliado)…');
     await this.insertSeed();
     this.logger.log('Seed concluído.');
   }
 
-  /**
-   * PostgreSQL: TRUNCATE … CASCADE em lote respeita FKs.
-   */
   private async clearAll(): Promise<void> {
     await this.dataSource.query(`
       TRUNCATE TABLE
@@ -159,896 +305,353 @@ export class DatabaseSeedService {
   }
 
   private async insertSeed(): Promise<void> {
-    await this.wmsUsers.save([
-      {
-        id: S.uAlice,
-        code: 'U-ALICE',
-        displayName: 'Alice (planejamento)',
+    const whIds = WAREHOUSE_SEED.map((w) => w.id);
+    await this.warehouses.save([...WAREHOUSE_SEED]);
+
+    const userRows: WmsUserOrmEntity[] = [];
+    const userIds: string[] = [];
+    for (let i = 0; i < SEED_USER_COUNT; i++) {
+      const id = i < USER_FIXED_IDS.length ? USER_FIXED_IDS[i] : randomUUID();
+      userIds.push(id);
+      userRows.push({
+        id,
+        code: codeForUserIndex(i),
+        displayName: displayNameForUserIndex(i),
         active: true,
-      },
-      {
-        id: S.uBob,
-        code: 'U-BOB',
-        displayName: 'Bob (separador)',
+      } as WmsUserOrmEntity);
+    }
+    await this.chunkSave(this.wmsUsers, userRows);
+
+    const zoneRows: ZoneOrmEntity[] = [];
+    const zoneIds: string[] = [];
+    for (let z = 0; z < ZONE_TEMPLATES.length; z++) {
+      const tpl = ZONE_TEMPLATES[z];
+      const id = randomUUID();
+      zoneIds.push(id);
+      zoneRows.push({
+        id,
+        warehouseId: whIds[tpl.warehouseIndex],
+        code: tpl.code,
+        name: tpl.name,
+        zoneType: tpl.zoneType,
+      } as ZoneOrmEntity);
+    }
+    await this.chunkSave(this.zones, zoneRows);
+
+    const locationRows: LocationOrmEntity[] = [];
+    const locationIds: string[] = [];
+    for (let l = 0; l < LOCATION_TEMPLATES.length; l++) {
+      const tpl = LOCATION_TEMPLATES[l];
+      const id = randomUUID();
+      locationIds.push(id);
+      locationRows.push({
+        id,
+        zoneId: zoneIds[tpl.zoneTemplateIndex],
+        code: tpl.code,
+        aisle: tpl.aisle,
+        bay: tpl.bay,
+        level: tpl.level,
         active: true,
-      },
-      {
-        id: S.uCarol,
-        code: 'U-CAROL',
-        displayName: 'Carol (expedição)',
+      } as LocationOrmEntity);
+    }
+    for (let l = LOCATION_TEMPLATES.length; l < SEED_LOCATION_COUNT; l++) {
+      const zoneIndex = l % ZONE_TEMPLATES.length;
+      const id = randomUUID();
+      locationIds.push(id);
+      locationRows.push({
+        id,
+        zoneId: zoneIds[zoneIndex],
+        code: `G-${String(l + 1).padStart(4, '0')}`,
+        aisle: `A${String((l % 24) + 1).padStart(2, '0')}`,
+        bay: `B${String(Math.floor(l / 24) % 40 + 1).padStart(2, '0')}`,
+        level: String((l % 5) + 1),
         active: true,
-      },
-      {
-        id: S.uDaniela,
-        code: 'U-DANIELA',
-        displayName: 'Daniela (recebimento)',
-        active: true,
-      },
-      {
-        id: S.uEduardo,
-        code: 'U-EDUARDO',
-        displayName: 'Eduardo (inventário)',
-        active: true,
-      },
-      {
-        id: S.uFernanda,
-        code: 'U-FERNANDA',
-        displayName: 'Fernanda (coordenação)',
-        active: true,
-      },
-    ]);
-    await this.warehouses.save([
-      {
-        id: S.whMain,
-        code: 'WH01',
-        name: 'CD Central — São Paulo',
-        active: true,
-      },
-      {
-        id: S.whSouth,
-        code: 'WH02',
-        name: 'CD Sul — Curitiba',
-        active: true,
-      },
-      {
-        id: S.whNorth,
-        code: 'WH03',
-        name: 'CD Nordeste — Recife',
-        active: true,
-      },
-      {
-        id: S.whMetro,
-        code: 'WH04',
-        name: 'Cross-docking — Belo Horizonte',
-        active: true,
-      },
-    ]);
-    await this.zones.save([
-      {
-        id: S.zStorage,
-        warehouseId: S.whMain,
-        code: 'STOR-A',
-        name: 'Armazenagem bloco A',
-        zoneType: ZoneType.STORAGE,
-      },
-      {
-        id: S.zPicking,
-        warehouseId: S.whMain,
-        code: 'PICK-F',
-        name: 'Separação frente de loja',
-        zoneType: ZoneType.PICKING,
-      },
-      {
-        id: S.zShipping,
-        warehouseId: S.whMain,
-        code: 'SHIP-1',
-        name: 'Doca de expedição 1',
-        zoneType: ZoneType.SHIPPING,
-      },
-      {
-        id: S.zMainRecv,
-        warehouseId: S.whMain,
-        code: 'RCV-01',
-        name: 'Recebimento principal',
-        zoneType: ZoneType.RECEIVING,
-      },
-      {
-        id: S.zMainStg,
-        warehouseId: S.whMain,
-        code: 'STG-01',
-        name: 'Área de consolidação',
-        zoneType: ZoneType.STAGING,
-      },
-      {
-        id: S.zStorageB,
-        warehouseId: S.whMain,
-        code: 'STOR-B',
-        name: 'Armazenagem bloco B',
-        zoneType: ZoneType.STORAGE,
-      },
-      {
-        id: S.zSouthStorage,
-        warehouseId: S.whSouth,
-        code: 'STOR-S',
-        name: 'Armazenagem Sul',
-        zoneType: ZoneType.STORAGE,
-      },
-      {
-        id: S.zSouthRecv,
-        warehouseId: S.whSouth,
-        code: 'RCV-S',
-        name: 'Recebimento Sul',
-        zoneType: ZoneType.RECEIVING,
-      },
-      {
-        id: S.zSouthShip,
-        warehouseId: S.whSouth,
-        code: 'SHIP-S',
-        name: 'Expedição Sul',
-        zoneType: ZoneType.SHIPPING,
-      },
-      {
-        id: S.zSouthPick,
-        warehouseId: S.whSouth,
-        code: 'PICK-S',
-        name: 'Separação Sul',
-        zoneType: ZoneType.PICKING,
-      },
-      {
-        id: S.zNorthStor,
-        warehouseId: S.whNorth,
-        code: 'STOR-N',
-        name: 'Armazenagem Nordeste',
-        zoneType: ZoneType.STORAGE,
-      },
-      {
-        id: S.zMetroPick,
-        warehouseId: S.whMetro,
-        code: 'PICK-M',
-        name: 'Separação expressa BH',
-        zoneType: ZoneType.PICKING,
-      },
-    ]);
-    await this.locations.save([
-      {
-        id: S.locBulkA,
-        zoneId: S.zStorage,
-        code: 'A-01-01',
-        aisle: 'A',
-        bay: '01',
-        level: '01',
-        active: true,
-      },
-      {
-        id: S.locBulkB,
-        zoneId: S.zStorage,
-        code: 'A-01-02',
-        aisle: 'A',
-        bay: '01',
-        level: '02',
-        active: true,
-      },
-      {
-        id: S.locPick1,
-        zoneId: S.zPicking,
-        code: 'PF-01',
-        aisle: 'PF',
-        bay: '01',
-        level: '1',
-        active: true,
-      },
-      {
-        id: S.locPick2,
-        zoneId: S.zPicking,
-        code: 'PF-02',
-        aisle: 'PF',
-        bay: '02',
-        level: '1',
-        active: true,
-      },
-      {
-        id: S.locDock,
-        zoneId: S.zShipping,
-        code: 'DOCK-01',
-        aisle: 'D',
-        bay: '01',
-        level: null,
-        active: true,
-      },
-      {
-        id: S.locSouthBulk,
-        zoneId: S.zSouthStorage,
-        code: 'S-01-01',
-        aisle: 'S',
-        bay: '01',
-        level: '01',
-        active: true,
-      },
-      {
-        id: S.locRecv01,
-        zoneId: S.zMainRecv,
-        code: 'RCV-D1',
-        aisle: 'R',
-        bay: '01',
-        level: null,
-        active: true,
-      },
-      {
-        id: S.locStg01,
-        zoneId: S.zMainStg,
-        code: 'STG-01',
-        aisle: 'G',
-        bay: '01',
-        level: '1',
-        active: true,
-      },
-      {
-        id: S.locBulkC,
-        zoneId: S.zStorageB,
-        code: 'B-02-01',
-        aisle: 'B',
-        bay: '02',
-        level: '01',
-        active: true,
-      },
-      {
-        id: S.locSouthDock,
-        zoneId: S.zSouthShip,
-        code: 'DOCK-S1',
-        aisle: 'DS',
-        bay: '01',
-        level: null,
-        active: true,
-      },
-      {
-        id: S.locSouthPF,
-        zoneId: S.zSouthPick,
-        code: 'PFS-01',
-        aisle: 'PS',
-        bay: '01',
-        level: '1',
-        active: true,
-      },
-      {
-        id: S.locNorth1,
-        zoneId: S.zNorthStor,
-        code: 'N-01-01',
-        aisle: 'N',
-        bay: '01',
-        level: '01',
-        active: true,
-      },
-      {
-        id: S.locMetro1,
-        zoneId: S.zMetroPick,
-        code: 'M-EXP-01',
-        aisle: 'M',
-        bay: '01',
-        level: '1',
-        active: true,
-      },
-    ]);
-    await this.products.save([
-      {
-        id: S.pSkuA,
-        name: 'Caixa de parafusos M6 zincado',
-        barcode: 'SEED-SKU-A',
-        description: 'Fixação em massa; paletizado no CD Central.',
-      },
-      {
-        id: S.pSkuB,
-        name: 'Fita adesiva transparente 48 mm x 50 m',
-        barcode: 'SEED-SKU-B',
-        description: 'Embalagem e fechamento de caixas.',
-      },
-      {
-        id: S.pSkuC,
-        name: 'Etiquetas térmicas 100 x 150 mm',
-        barcode: 'SEED-SKU-C',
-        description: 'Bobina para impressora de etiquetas de transporte.',
-      },
-      {
-        id: S.pSkuD,
-        name: 'Tubo PVC soldável 50 mm',
-        barcode: 'SEED-SKU-D',
-        description: 'Produto volumoso; manuseio com empilhadeira.',
-      },
-      {
-        id: S.pSkuE,
-        name: 'Luva de proteção nitrílica tamanho G',
-        barcode: 'SEED-SKU-E',
-        description: 'EPI descartável; lote homologado NR-6.',
-      },
-      {
-        id: S.pSkuF,
-        name: 'Caixa de papelão ondulado 40 x 30 x 25 cm',
-        barcode: 'SEED-SKU-F',
-        description: 'Embalagem secundária para e-commerce.',
-      },
-      {
-        id: S.pSkuG,
-        name: 'Spray lubrificante multiuso 300 ml',
-        barcode: 'SEED-SKU-G',
-        description: 'Manutenção leve; armazenar longe de calor.',
-      },
-      {
-        id: S.pSkuH,
-        name: 'Cinta de poliéster para amarração 50 mm',
-        barcode: 'SEED-SKU-H',
-        description: 'Unitização de paletes na doca.',
-      },
-    ]);
-    await this.handlingUnits.save([
-      {
-        id: S.huPallet,
-        code: 'SSCC-SEED-PALLET-01',
-        type: HandlingUnitType.PALLET,
-        currentLocationId: S.locBulkA,
-        status: HandlingUnitStatus.IN_USE,
-      },
-      {
-        id: S.huTote,
-        code: 'TOTE-SEED-VAZIO-01',
-        type: HandlingUnitType.TOTE,
-        currentLocationId: S.locPick1,
-        status: HandlingUnitStatus.EMPTY,
-      },
-      {
-        id: S.huBlocked,
-        code: 'CX-SEED-BLOQUEADA-01',
-        type: HandlingUnitType.CASE,
-        currentLocationId: S.locBulkB,
-        status: HandlingUnitStatus.BLOCKED,
-      },
-      {
-        id: S.huPallet2,
-        code: 'SSCC-SEED-PALLET-02',
-        type: HandlingUnitType.PALLET,
-        currentLocationId: S.locBulkC,
-        status: HandlingUnitStatus.IN_USE,
-      },
-      {
-        id: S.huTote2,
-        code: 'TOTE-SEED-EM-USO-02',
-        type: HandlingUnitType.TOTE,
-        currentLocationId: S.locSouthPF,
-        status: HandlingUnitStatus.IN_USE,
-      },
-      {
-        id: S.huCase2,
-        code: 'CX-SEED-REC-01',
-        type: HandlingUnitType.CASE,
-        currentLocationId: S.locRecv01,
-        status: HandlingUnitStatus.IN_USE,
-      },
-    ]);
-    await this.inventoryBalances.save([
-      {
-        productId: S.pSkuA,
-        locationId: S.locBulkA,
-        handlingUnitId: S.huPallet,
-        quantityOnHand: 240,
-        quantityReserved: 40,
-      },
-      {
-        productId: S.pSkuB,
-        locationId: S.locPick1,
-        handlingUnitId: null,
-        quantityOnHand: 80,
-        quantityReserved: 0,
-      },
-      {
-        productId: S.pSkuC,
-        locationId: S.locPick2,
-        handlingUnitId: null,
-        quantityOnHand: 25,
-        quantityReserved: 10,
-      },
-      {
-        productId: S.pSkuD,
-        locationId: S.locBulkB,
-        handlingUnitId: null,
-        quantityOnHand: 12,
-        quantityReserved: 0,
-      },
-      {
-        productId: S.pSkuB,
-        locationId: S.locSouthBulk,
-        handlingUnitId: null,
-        quantityOnHand: 30,
-        quantityReserved: 0,
-      },
-      {
-        productId: S.pSkuE,
-        locationId: S.locSouthBulk,
-        handlingUnitId: null,
-        quantityOnHand: 200,
-        quantityReserved: 24,
-      },
-      {
-        productId: S.pSkuE,
-        locationId: S.locBulkC,
-        handlingUnitId: S.huPallet2,
-        quantityOnHand: 500,
-        quantityReserved: 50,
-      },
-      {
-        productId: S.pSkuF,
-        locationId: S.locStg01,
-        handlingUnitId: null,
-        quantityOnHand: 120,
-        quantityReserved: 0,
-      },
-      {
-        productId: S.pSkuG,
-        locationId: S.locRecv01,
-        handlingUnitId: S.huCase2,
-        quantityOnHand: 48,
-        quantityReserved: 0,
-      },
-      {
-        productId: S.pSkuH,
-        locationId: S.locDock,
-        handlingUnitId: null,
-        quantityOnHand: 200,
-        quantityReserved: 20,
-      },
-      {
-        productId: S.pSkuC,
-        locationId: S.locNorth1,
-        handlingUnitId: null,
-        quantityOnHand: 60,
-        quantityReserved: 0,
-      },
-      {
-        productId: S.pSkuA,
-        locationId: S.locMetro1,
-        handlingUnitId: null,
-        quantityOnHand: 15,
-        quantityReserved: 5,
-      },
-      {
-        productId: S.pSkuD,
-        locationId: S.locSouthPF,
-        handlingUnitId: S.huTote2,
-        quantityOnHand: 8,
-        quantityReserved: 0,
-      },
-    ]);
+      } as LocationOrmEntity);
+    }
+    await this.chunkSave(this.locations, locationRows);
+
+    const productRows: ProductOrmEntity[] = [];
+    const productIds: string[] = [];
+    const productCount = PRODUCT_TEMPLATES.length * SEED_ROW_MULTIPLIER;
+    for (let p = 0; p < productCount; p++) {
+      const tpl = PRODUCT_TEMPLATES[p % PRODUCT_TEMPLATES.length];
+      const rep = Math.floor(p / PRODUCT_TEMPLATES.length);
+      const id = p < PRODUCT_FIXED_IDS.length ? PRODUCT_FIXED_IDS[p] : randomUUID();
+      productIds.push(id);
+      productRows.push({
+        id,
+        name: rep === 0 ? tpl.name : `${tpl.name} (lote ${rep})`,
+        barcode: rep === 0 ? tpl.barcode : `${tpl.barcode}-R${rep}`,
+        description: tpl.description,
+      } as ProductOrmEntity);
+    }
+    await this.chunkSave(this.products, productRows);
+
+    const huTemplates: ReadonlyArray<{
+      code: string;
+      type: HandlingUnitType;
+      status: HandlingUnitStatus;
+      locationIndex: number;
+    }> = [
+      { code: 'SSCC-SEED-PALLET-01', type: HandlingUnitType.PALLET, status: HandlingUnitStatus.IN_USE, locationIndex: 0 },
+      { code: 'TOTE-SEED-VAZIO-01', type: HandlingUnitType.TOTE, status: HandlingUnitStatus.EMPTY, locationIndex: 2 },
+      { code: 'CX-SEED-BLOQUEADA-01', type: HandlingUnitType.CASE, status: HandlingUnitStatus.BLOCKED, locationIndex: 1 },
+      { code: 'SSCC-SEED-PALLET-02', type: HandlingUnitType.PALLET, status: HandlingUnitStatus.IN_USE, locationIndex: 8 },
+      { code: 'TOTE-SEED-EM-USO-02', type: HandlingUnitType.TOTE, status: HandlingUnitStatus.IN_USE, locationIndex: 10 },
+      { code: 'CX-SEED-REC-01', type: HandlingUnitType.CASE, status: HandlingUnitStatus.IN_USE, locationIndex: 6 },
+    ];
+    const huRows: HandlingUnitOrmEntity[] = [];
+    const huIds: string[] = [];
+    const huCount = huTemplates.length * SEED_ROW_MULTIPLIER;
+    for (let h = 0; h < huCount; h++) {
+      const tpl = huTemplates[h % huTemplates.length];
+      const rep = Math.floor(h / huTemplates.length);
+      const id = randomUUID();
+      huIds.push(id);
+      const locIdx = locationIndexFor(rep, tpl.locationIndex);
+      huRows.push({
+        id,
+        code: rep === 0 ? tpl.code : `${tpl.code}-R${rep}`,
+        type: tpl.type,
+        currentLocationId: locationIds[locIdx],
+        status: tpl.status,
+      } as HandlingUnitOrmEntity);
+    }
+    await this.chunkSave(this.handlingUnits, huRows);
+
+    const balanceTemplates: ReadonlyArray<{
+      productIndex: number;
+      locationIndex: number;
+      handlingUnitIndex: number | null;
+      quantityOnHand: number;
+      quantityReserved: number;
+    }> = [
+      { productIndex: 0, locationIndex: 0, handlingUnitIndex: 0, quantityOnHand: 240, quantityReserved: 40 },
+      { productIndex: 1, locationIndex: 2, handlingUnitIndex: null, quantityOnHand: 80, quantityReserved: 0 },
+      { productIndex: 2, locationIndex: 3, handlingUnitIndex: null, quantityOnHand: 25, quantityReserved: 10 },
+      { productIndex: 3, locationIndex: 1, handlingUnitIndex: null, quantityOnHand: 12, quantityReserved: 0 },
+      { productIndex: 1, locationIndex: 5, handlingUnitIndex: null, quantityOnHand: 30, quantityReserved: 0 },
+      { productIndex: 4, locationIndex: 5, handlingUnitIndex: null, quantityOnHand: 200, quantityReserved: 24 },
+      { productIndex: 4, locationIndex: 8, handlingUnitIndex: 3, quantityOnHand: 500, quantityReserved: 50 },
+      { productIndex: 5, locationIndex: 7, handlingUnitIndex: null, quantityOnHand: 120, quantityReserved: 0 },
+      { productIndex: 6, locationIndex: 6, handlingUnitIndex: 5, quantityOnHand: 48, quantityReserved: 0 },
+      { productIndex: 7, locationIndex: 4, handlingUnitIndex: null, quantityOnHand: 200, quantityReserved: 20 },
+      { productIndex: 2, locationIndex: 11, handlingUnitIndex: null, quantityOnHand: 60, quantityReserved: 0 },
+      { productIndex: 0, locationIndex: 12, handlingUnitIndex: null, quantityOnHand: 15, quantityReserved: 5 },
+      { productIndex: 3, locationIndex: 10, handlingUnitIndex: 4, quantityOnHand: 8, quantityReserved: 0 },
+    ];
+    const balRows: InventoryBalanceOrmEntity[] = [];
+    const balanceCount = balanceTemplates.length * SEED_ROW_MULTIPLIER;
+    for (let b = 0; b < balanceCount; b++) {
+      const tpl = balanceTemplates[b % balanceTemplates.length];
+      const rep = Math.floor(b / balanceTemplates.length);
+      const pid = productIds[tpl.productIndex + rep * PRODUCT_TEMPLATES.length];
+      const lid = locationIds[locationIndexFor(rep, tpl.locationIndex)];
+      const hid =
+        tpl.handlingUnitIndex === null
+          ? null
+          : huIds[tpl.handlingUnitIndex + rep * huTemplates.length];
+      balRows.push({
+        productId: pid,
+        locationId: lid,
+        handlingUnitId: hid,
+        quantityOnHand: tpl.quantityOnHand,
+        quantityReserved: tpl.quantityReserved,
+      } as InventoryBalanceOrmEntity);
+    }
+    await this.chunkSave(this.inventoryBalances, balRows);
+
     const now = new Date();
-    await this.pickOrders.save([
-      {
-        id: S.poDraft,
-        orderNumber: 'PO-SEED-RASCUNHO',
-        warehouseId: S.whMain,
-        status: PickOrderStatus.DRAFT,
-        priority: 5,
-        createdByUserId: S.uAlice,
+    const pickOrderTemplates: ReadonlyArray<{
+      orderNumber: string;
+      warehouseIndex: number;
+      status: PickOrderStatus;
+      priority: number;
+      createdByUserIndex: number;
+      releasedByUserIndex: number | null;
+      completedByUserIndex: number | null;
+    }> = [
+      { orderNumber: 'PO-SEED-RASCUNHO', warehouseIndex: 0, status: PickOrderStatus.DRAFT, priority: 5, createdByUserIndex: 0, releasedByUserIndex: null, completedByUserIndex: null },
+      { orderNumber: 'PO-SEED-LIBERADO', warehouseIndex: 0, status: PickOrderStatus.RELEASED, priority: 3, createdByUserIndex: 0, releasedByUserIndex: 0, completedByUserIndex: null },
+      { orderNumber: 'PO-SEED-SEPARANDO', warehouseIndex: 0, status: PickOrderStatus.PICKING, priority: 2, createdByUserIndex: 0, releasedByUserIndex: 0, completedByUserIndex: null },
+      { orderNumber: 'PO-SEED-CONCLUIDO', warehouseIndex: 0, status: PickOrderStatus.PICKED, priority: 1, createdByUserIndex: 0, releasedByUserIndex: 0, completedByUserIndex: 1 },
+      { orderNumber: 'PO-SEED-CANCELADO', warehouseIndex: 0, status: PickOrderStatus.CANCELLED, priority: 9, createdByUserIndex: 0, releasedByUserIndex: null, completedByUserIndex: null },
+      { orderNumber: 'PO-SEED-SUL-RASCUNHO', warehouseIndex: 1, status: PickOrderStatus.DRAFT, priority: 6, createdByUserIndex: 5, releasedByUserIndex: null, completedByUserIndex: null },
+      { orderNumber: 'PO-SEED-SUL-LIBERADO', warehouseIndex: 1, status: PickOrderStatus.RELEASED, priority: 4, createdByUserIndex: 5, releasedByUserIndex: 5, completedByUserIndex: null },
+      { orderNumber: 'PO-SEED-SUL-SEPARANDO', warehouseIndex: 1, status: PickOrderStatus.PICKING, priority: 3, createdByUserIndex: 5, releasedByUserIndex: 5, completedByUserIndex: null },
+      { orderNumber: 'PO-SEED-SUL-CONCLUIDO', warehouseIndex: 1, status: PickOrderStatus.PICKED, priority: 2, createdByUserIndex: 5, releasedByUserIndex: 5, completedByUserIndex: 1 },
+      { orderNumber: 'PO-SEED-CANCELADO-2', warehouseIndex: 3, status: PickOrderStatus.CANCELLED, priority: 8, createdByUserIndex: 3, releasedByUserIndex: null, completedByUserIndex: null },
+    ];
+    const poRows: PickOrderOrmEntity[] = [];
+    const pickOrderIds: string[] = [];
+    const pickOrderCount = pickOrderTemplates.length * SEED_ROW_MULTIPLIER;
+    for (let o = 0; o < pickOrderCount; o++) {
+      const tpl = pickOrderTemplates[o % pickOrderTemplates.length];
+      const rep = Math.floor(o / pickOrderTemplates.length);
+      const id = randomUUID();
+      pickOrderIds.push(id);
+      poRows.push({
+        id,
+        orderNumber: rep === 0 ? tpl.orderNumber : `${tpl.orderNumber}-R${rep}`,
+        warehouseId: whIds[tpl.warehouseIndex],
+        status: tpl.status,
+        priority: tpl.priority,
+        createdByUserId: userIds[tpl.createdByUserIndex],
+        releasedByUserId: tpl.releasedByUserIndex === null ? null : userIds[tpl.releasedByUserIndex],
+        releasedAt: tpl.releasedByUserIndex === null ? null : now,
+        completedByUserId: tpl.completedByUserIndex === null ? null : userIds[tpl.completedByUserIndex],
+        completedAt: tpl.completedByUserIndex === null ? null : now,
+      } as PickOrderOrmEntity);
+    }
+    await this.chunkSave(this.pickOrders, poRows);
+
+    type PickLineTpl = {
+      orderOffset: number;
+      productIndex: number;
+      quantityOrdered: number;
+      quantityPicked: number;
+      sourceLocationIndex: number | null;
+      status: PickLineStatus;
+      pickedByUserIndex: number | null;
+    };
+    const pickLineTemplates: ReadonlyArray<PickLineTpl> = [
+      { orderOffset: 0, productIndex: 0, quantityOrdered: 10, quantityPicked: 0, sourceLocationIndex: 0, status: PickLineStatus.OPEN, pickedByUserIndex: null },
+      { orderOffset: 1, productIndex: 1, quantityOrdered: 15, quantityPicked: 0, sourceLocationIndex: 2, status: PickLineStatus.OPEN, pickedByUserIndex: null },
+      { orderOffset: 1, productIndex: 2, quantityOrdered: 5, quantityPicked: 0, sourceLocationIndex: 3, status: PickLineStatus.OPEN, pickedByUserIndex: null },
+      { orderOffset: 2, productIndex: 1, quantityOrdered: 20, quantityPicked: 8, sourceLocationIndex: 2, status: PickLineStatus.PARTIAL, pickedByUserIndex: 1 },
+      { orderOffset: 2, productIndex: 2, quantityOrdered: 10, quantityPicked: 0, sourceLocationIndex: 3, status: PickLineStatus.OPEN, pickedByUserIndex: null },
+      { orderOffset: 3, productIndex: 3, quantityOrdered: 4, quantityPicked: 4, sourceLocationIndex: 1, status: PickLineStatus.DONE, pickedByUserIndex: 1 },
+      { orderOffset: 4, productIndex: 0, quantityOrdered: 99, quantityPicked: 0, sourceLocationIndex: null, status: PickLineStatus.OPEN, pickedByUserIndex: null },
+      { orderOffset: 5, productIndex: 1, quantityOrdered: 12, quantityPicked: 0, sourceLocationIndex: 5, status: PickLineStatus.OPEN, pickedByUserIndex: null },
+      { orderOffset: 6, productIndex: 3, quantityOrdered: 6, quantityPicked: 0, sourceLocationIndex: 10, status: PickLineStatus.OPEN, pickedByUserIndex: null },
+      { orderOffset: 6, productIndex: 4, quantityOrdered: 24, quantityPicked: 0, sourceLocationIndex: 5, status: PickLineStatus.OPEN, pickedByUserIndex: null },
+      { orderOffset: 7, productIndex: 1, quantityOrdered: 18, quantityPicked: 10, sourceLocationIndex: 5, status: PickLineStatus.PARTIAL, pickedByUserIndex: 1 },
+      { orderOffset: 7, productIndex: 7, quantityOrdered: 4, quantityPicked: 0, sourceLocationIndex: 9, status: PickLineStatus.OPEN, pickedByUserIndex: null },
+      { orderOffset: 8, productIndex: 2, quantityOrdered: 8, quantityPicked: 8, sourceLocationIndex: 10, status: PickLineStatus.DONE, pickedByUserIndex: 2 },
+      { orderOffset: 9, productIndex: 0, quantityOrdered: 50, quantityPicked: 0, sourceLocationIndex: 12, status: PickLineStatus.OPEN, pickedByUserIndex: null },
+    ];
+    const plRows: PickLineOrmEntity[] = [];
+    for (let rep = 0; rep < SEED_ROW_MULTIPLIER; rep++) {
+      const baseOrder = rep * pickOrderTemplates.length;
+      const baseProduct = rep * PRODUCT_TEMPLATES.length;
+      for (const lt of pickLineTemplates) {
+        const oid = pickOrderIds[baseOrder + lt.orderOffset];
+        const pid = productIds[baseProduct + (lt.productIndex % PRODUCT_TEMPLATES.length)];
+        const src =
+          lt.sourceLocationIndex === null
+            ? null
+            : locationIds[locationIndexFor(rep, lt.sourceLocationIndex)];
+        plRows.push({
+          pickOrderId: oid,
+          productId: pid,
+          quantityOrdered: lt.quantityOrdered,
+          quantityPicked: lt.quantityPicked,
+          sourceLocationId: src,
+          sourceHandlingUnitId: null,
+          status: lt.status,
+          pickedByUserId:
+            lt.pickedByUserIndex === null ? null : userIds[lt.pickedByUserIndex],
+          pickedAt: lt.pickedByUserIndex === null ? null : now,
+        } as PickLineOrmEntity);
+      }
+    }
+    await this.chunkSave(this.pickLines, plRows);
+
+    const transferOrderTemplates: ReadonlyArray<{
+      referenceCode: string;
+      warehouseIndex: number;
+      status: TransferOrderStatus;
+      createdByUserIndex: number;
+      completedByUserIndex: number | null;
+    }> = [
+      { referenceCode: 'TRF-SEED-RASCUNHO', warehouseIndex: 0, status: TransferOrderStatus.DRAFT, createdByUserIndex: 0, completedByUserIndex: null },
+      { referenceCode: 'TRF-SEED-EM-ANDAMENTO', warehouseIndex: 0, status: TransferOrderStatus.IN_PROGRESS, createdByUserIndex: 0, completedByUserIndex: null },
+      { referenceCode: 'TRF-SEED-CONCLUIDO', warehouseIndex: 0, status: TransferOrderStatus.COMPLETED, createdByUserIndex: 0, completedByUserIndex: 2 },
+      { referenceCode: 'TRF-SEED-SUL-RASCUNHO', warehouseIndex: 1, status: TransferOrderStatus.DRAFT, createdByUserIndex: 5, completedByUserIndex: null },
+      { referenceCode: 'TRF-SEED-SUL-ANDAMENTO', warehouseIndex: 1, status: TransferOrderStatus.IN_PROGRESS, createdByUserIndex: 3, completedByUserIndex: null },
+      { referenceCode: 'TRF-SEED-SUL-CONCLUIDO', warehouseIndex: 1, status: TransferOrderStatus.COMPLETED, createdByUserIndex: 4, completedByUserIndex: 2 },
+    ];
+    const toRows: TransferOrderOrmEntity[] = [];
+    const transferOrderIds: string[] = [];
+    const transferOrderCount = transferOrderTemplates.length * SEED_ROW_MULTIPLIER;
+    for (let t = 0; t < transferOrderCount; t++) {
+      const tpl = transferOrderTemplates[t % transferOrderTemplates.length];
+      const rep = Math.floor(t / transferOrderTemplates.length);
+      const id = randomUUID();
+      transferOrderIds.push(id);
+      toRows.push({
+        id,
+        referenceCode: rep === 0 ? tpl.referenceCode : `${tpl.referenceCode}-R${rep}`,
+        warehouseId: whIds[tpl.warehouseIndex],
+        status: tpl.status,
+        createdByUserId: userIds[tpl.createdByUserIndex],
         releasedByUserId: null,
         releasedAt: null,
-        completedByUserId: null,
-        completedAt: null,
-      },
-      {
-        id: S.poReleased,
-        orderNumber: 'PO-SEED-LIBERADO',
-        warehouseId: S.whMain,
-        status: PickOrderStatus.RELEASED,
-        priority: 3,
-        createdByUserId: S.uAlice,
-        releasedByUserId: S.uAlice,
-        releasedAt: now,
-        completedByUserId: null,
-        completedAt: null,
-      },
-      {
-        id: S.poPicking,
-        orderNumber: 'PO-SEED-SEPARANDO',
-        warehouseId: S.whMain,
-        status: PickOrderStatus.PICKING,
-        priority: 2,
-        createdByUserId: S.uAlice,
-        releasedByUserId: S.uAlice,
-        releasedAt: now,
-        completedByUserId: null,
-        completedAt: null,
-      },
-      {
-        id: S.poPicked,
-        orderNumber: 'PO-SEED-CONCLUIDO',
-        warehouseId: S.whMain,
-        status: PickOrderStatus.PICKED,
-        priority: 1,
-        createdByUserId: S.uAlice,
-        releasedByUserId: S.uAlice,
-        releasedAt: now,
-        completedByUserId: S.uBob,
-        completedAt: now,
-      },
-      {
-        id: S.poCancelled,
-        orderNumber: 'PO-SEED-CANCELADO',
-        warehouseId: S.whMain,
-        status: PickOrderStatus.CANCELLED,
-        priority: 9,
-        createdByUserId: S.uAlice,
-        releasedByUserId: null,
-        releasedAt: null,
-        completedByUserId: null,
-        completedAt: null,
-      },
-      {
-        id: S.poDraftSul,
-        orderNumber: 'PO-SEED-SUL-RASCUNHO',
-        warehouseId: S.whSouth,
-        status: PickOrderStatus.DRAFT,
-        priority: 6,
-        createdByUserId: S.uFernanda,
-        releasedByUserId: null,
-        releasedAt: null,
-        completedByUserId: null,
-        completedAt: null,
-      },
-      {
-        id: S.poReleasedSul,
-        orderNumber: 'PO-SEED-SUL-LIBERADO',
-        warehouseId: S.whSouth,
-        status: PickOrderStatus.RELEASED,
-        priority: 4,
-        createdByUserId: S.uFernanda,
-        releasedByUserId: S.uFernanda,
-        releasedAt: now,
-        completedByUserId: null,
-        completedAt: null,
-      },
-      {
-        id: S.poPickingSul,
-        orderNumber: 'PO-SEED-SUL-SEPARANDO',
-        warehouseId: S.whSouth,
-        status: PickOrderStatus.PICKING,
-        priority: 3,
-        createdByUserId: S.uFernanda,
-        releasedByUserId: S.uFernanda,
-        releasedAt: now,
-        completedByUserId: null,
-        completedAt: null,
-      },
-      {
-        id: S.poPickedSul,
-        orderNumber: 'PO-SEED-SUL-CONCLUIDO',
-        warehouseId: S.whSouth,
-        status: PickOrderStatus.PICKED,
-        priority: 2,
-        createdByUserId: S.uFernanda,
-        releasedByUserId: S.uFernanda,
-        releasedAt: now,
-        completedByUserId: S.uBob,
-        completedAt: now,
-      },
-      {
-        id: S.poCancelled2,
-        orderNumber: 'PO-SEED-CANCELADO-2',
-        warehouseId: S.whMetro,
-        status: PickOrderStatus.CANCELLED,
-        priority: 8,
-        createdByUserId: S.uDaniela,
-        releasedByUserId: null,
-        releasedAt: null,
-        completedByUserId: null,
-        completedAt: null,
-      },
-    ]);
-    await this.pickLines.save([
-      {
-        pickOrderId: S.poDraft,
-        productId: S.pSkuA,
-        quantityOrdered: 10,
-        quantityPicked: 0,
-        sourceLocationId: S.locBulkA,
-        status: PickLineStatus.OPEN,
-        pickedByUserId: null,
-        pickedAt: null,
-      },
-      {
-        pickOrderId: S.poReleased,
-        productId: S.pSkuB,
-        quantityOrdered: 15,
-        quantityPicked: 0,
-        sourceLocationId: S.locPick1,
-        status: PickLineStatus.OPEN,
-        pickedByUserId: null,
-        pickedAt: null,
-      },
-      {
-        pickOrderId: S.poReleased,
-        productId: S.pSkuC,
-        quantityOrdered: 5,
-        quantityPicked: 0,
-        sourceLocationId: S.locPick2,
-        status: PickLineStatus.OPEN,
-        pickedByUserId: null,
-        pickedAt: null,
-      },
-      {
-        pickOrderId: S.poPicking,
-        productId: S.pSkuB,
-        quantityOrdered: 20,
-        quantityPicked: 8,
-        sourceLocationId: S.locPick1,
-        status: PickLineStatus.PARTIAL,
-        pickedByUserId: S.uBob,
-        pickedAt: now,
-      },
-      {
-        pickOrderId: S.poPicking,
-        productId: S.pSkuC,
-        quantityOrdered: 10,
-        quantityPicked: 0,
-        sourceLocationId: S.locPick2,
-        status: PickLineStatus.OPEN,
-        pickedByUserId: null,
-        pickedAt: null,
-      },
-      {
-        pickOrderId: S.poPicked,
-        productId: S.pSkuD,
-        quantityOrdered: 4,
-        quantityPicked: 4,
-        sourceLocationId: S.locBulkB,
-        status: PickLineStatus.DONE,
-        pickedByUserId: S.uBob,
-        pickedAt: now,
-      },
-      {
-        pickOrderId: S.poCancelled,
-        productId: S.pSkuA,
-        quantityOrdered: 99,
-        quantityPicked: 0,
-        sourceLocationId: null,
-        status: PickLineStatus.OPEN,
-        pickedByUserId: null,
-        pickedAt: null,
-      },
-      {
-        pickOrderId: S.poDraftSul,
-        productId: S.pSkuB,
-        quantityOrdered: 12,
-        quantityPicked: 0,
-        sourceLocationId: S.locSouthBulk,
-        status: PickLineStatus.OPEN,
-        pickedByUserId: null,
-        pickedAt: null,
-      },
-      {
-        pickOrderId: S.poReleasedSul,
-        productId: S.pSkuD,
-        quantityOrdered: 6,
-        quantityPicked: 0,
-        sourceLocationId: S.locSouthPF,
-        status: PickLineStatus.OPEN,
-        pickedByUserId: null,
-        pickedAt: null,
-      },
-      {
-        pickOrderId: S.poReleasedSul,
-        productId: S.pSkuE,
-        quantityOrdered: 24,
-        quantityPicked: 0,
-        sourceLocationId: S.locSouthBulk,
-        status: PickLineStatus.OPEN,
-        pickedByUserId: null,
-        pickedAt: null,
-      },
-      {
-        pickOrderId: S.poPickingSul,
-        productId: S.pSkuB,
-        quantityOrdered: 18,
-        quantityPicked: 10,
-        sourceLocationId: S.locSouthBulk,
-        status: PickLineStatus.PARTIAL,
-        pickedByUserId: S.uBob,
-        pickedAt: now,
-      },
-      {
-        pickOrderId: S.poPickingSul,
-        productId: S.pSkuH,
-        quantityOrdered: 4,
-        quantityPicked: 0,
-        sourceLocationId: S.locSouthDock,
-        status: PickLineStatus.OPEN,
-        pickedByUserId: null,
-        pickedAt: null,
-      },
-      {
-        pickOrderId: S.poPickedSul,
-        productId: S.pSkuC,
-        quantityOrdered: 8,
-        quantityPicked: 8,
-        sourceLocationId: S.locSouthPF,
-        status: PickLineStatus.DONE,
-        pickedByUserId: S.uCarol,
-        pickedAt: now,
-      },
-      {
-        pickOrderId: S.poCancelled2,
-        productId: S.pSkuA,
-        quantityOrdered: 50,
-        quantityPicked: 0,
-        sourceLocationId: S.locMetro1,
-        status: PickLineStatus.OPEN,
-        pickedByUserId: null,
-        pickedAt: null,
-      },
-    ]);
-    await this.transferOrders.save([
-      {
-        id: S.toDraft,
-        referenceCode: 'TRF-SEED-RASCUNHO',
-        warehouseId: S.whMain,
-        status: TransferOrderStatus.DRAFT,
-        createdByUserId: S.uAlice,
-        releasedByUserId: null,
-        releasedAt: null,
-        completedByUserId: null,
-        completedAt: null,
-      },
-      {
-        id: S.toProgress,
-        referenceCode: 'TRF-SEED-EM-ANDAMENTO',
-        warehouseId: S.whMain,
-        status: TransferOrderStatus.IN_PROGRESS,
-        createdByUserId: S.uAlice,
-        releasedByUserId: null,
-        releasedAt: null,
-        completedByUserId: null,
-        completedAt: null,
-      },
-      {
-        id: S.toDone,
-        referenceCode: 'TRF-SEED-CONCLUIDO',
-        warehouseId: S.whMain,
-        status: TransferOrderStatus.COMPLETED,
-        createdByUserId: S.uAlice,
-        releasedByUserId: null,
-        releasedAt: null,
-        completedByUserId: S.uCarol,
-        completedAt: now,
-      },
-      {
-        id: S.toDraftSul,
-        referenceCode: 'TRF-SEED-SUL-RASCUNHO',
-        warehouseId: S.whSouth,
-        status: TransferOrderStatus.DRAFT,
-        createdByUserId: S.uFernanda,
-        releasedByUserId: null,
-        releasedAt: null,
-        completedByUserId: null,
-        completedAt: null,
-      },
-      {
-        id: S.toProgress2,
-        referenceCode: 'TRF-SEED-SUL-ANDAMENTO',
-        warehouseId: S.whSouth,
-        status: TransferOrderStatus.IN_PROGRESS,
-        createdByUserId: S.uDaniela,
-        releasedByUserId: null,
-        releasedAt: null,
-        completedByUserId: null,
-        completedAt: null,
-      },
-      {
-        id: S.toDoneSul,
-        referenceCode: 'TRF-SEED-SUL-CONCLUIDO',
-        warehouseId: S.whSouth,
-        status: TransferOrderStatus.COMPLETED,
-        createdByUserId: S.uEduardo,
-        releasedByUserId: null,
-        releasedAt: null,
-        completedByUserId: S.uCarol,
-        completedAt: now,
-      },
-    ]);
-    await this.transferLines.save([
-      {
-        transferOrderId: S.toDraft,
-        productId: S.pSkuA,
-        quantity: 12,
-        fromLocationId: S.locBulkA,
-        toLocationId: S.locPick1,
-        fromHandlingUnitId: S.huPallet,
-        toHandlingUnitId: null,
-        status: TransferLineStatus.OPEN,
-      },
-      {
-        transferOrderId: S.toProgress,
-        productId: S.pSkuB,
-        quantity: 6,
-        fromLocationId: S.locPick1,
-        toLocationId: S.locDock,
-        fromHandlingUnitId: null,
-        toHandlingUnitId: S.huTote,
-        status: TransferLineStatus.DONE,
-      },
-      {
-        transferOrderId: S.toProgress,
-        productId: S.pSkuC,
-        quantity: 3,
-        fromLocationId: S.locPick2,
-        toLocationId: S.locDock,
-        fromHandlingUnitId: null,
-        toHandlingUnitId: null,
-        status: TransferLineStatus.OPEN,
-      },
-      {
-        transferOrderId: S.toDone,
-        productId: S.pSkuD,
-        quantity: 2,
-        fromLocationId: S.locBulkB,
-        toLocationId: S.locDock,
-        fromHandlingUnitId: null,
-        toHandlingUnitId: null,
-        status: TransferLineStatus.DONE,
-      },
-      {
-        transferOrderId: S.toDraftSul,
-        productId: S.pSkuB,
-        quantity: 20,
-        fromLocationId: S.locSouthBulk,
-        toLocationId: S.locSouthPF,
-        fromHandlingUnitId: null,
-        toHandlingUnitId: null,
-        status: TransferLineStatus.OPEN,
-      },
-      {
-        transferOrderId: S.toDraftSul,
-        productId: S.pSkuF,
-        quantity: 30,
-        fromLocationId: S.locStg01,
-        toLocationId: S.locSouthBulk,
-        fromHandlingUnitId: null,
-        toHandlingUnitId: null,
-        status: TransferLineStatus.OPEN,
-      },
-      {
-        transferOrderId: S.toProgress2,
-        productId: S.pSkuG,
-        quantity: 12,
-        fromLocationId: S.locRecv01,
-        toLocationId: S.locSouthDock,
-        fromHandlingUnitId: S.huCase2,
-        toHandlingUnitId: null,
-        status: TransferLineStatus.DONE,
-      },
-      {
-        transferOrderId: S.toProgress2,
-        productId: S.pSkuH,
-        quantity: 15,
-        fromLocationId: S.locDock,
-        toLocationId: S.locStg01,
-        fromHandlingUnitId: null,
-        toHandlingUnitId: null,
-        status: TransferLineStatus.OPEN,
-      },
-      {
-        transferOrderId: S.toDoneSul,
-        productId: S.pSkuE,
-        quantity: 100,
-        fromLocationId: S.locBulkC,
-        toLocationId: S.locSouthBulk,
-        fromHandlingUnitId: S.huPallet2,
-        toHandlingUnitId: null,
-        status: TransferLineStatus.DONE,
-      },
-      {
-        transferOrderId: S.toDoneSul,
-        productId: S.pSkuC,
-        quantity: 10,
-        fromLocationId: S.locNorth1,
-        toLocationId: S.locMetro1,
-        fromHandlingUnitId: null,
-        toHandlingUnitId: null,
-        status: TransferLineStatus.DONE,
-      },
-    ]);
+        completedByUserId: tpl.completedByUserIndex === null ? null : userIds[tpl.completedByUserIndex],
+        completedAt: tpl.completedByUserIndex === null ? null : now,
+      } as TransferOrderOrmEntity);
+    }
+    await this.chunkSave(this.transferOrders, toRows);
+
+    type TLineTpl = {
+      orderOffset: number;
+      productIndex: number;
+      quantity: number;
+      fromLocIndex: number;
+      toLocIndex: number;
+      fromHuIndex: number | null;
+      toHuIndex: number | null;
+      status: TransferLineStatus;
+    };
+    const transferLineTemplates: ReadonlyArray<TLineTpl> = [
+      { orderOffset: 0, productIndex: 0, quantity: 12, fromLocIndex: 0, toLocIndex: 2, fromHuIndex: 0, toHuIndex: null, status: TransferLineStatus.OPEN },
+      { orderOffset: 1, productIndex: 1, quantity: 6, fromLocIndex: 2, toLocIndex: 4, fromHuIndex: null, toHuIndex: 1, status: TransferLineStatus.DONE },
+      { orderOffset: 1, productIndex: 2, quantity: 3, fromLocIndex: 3, toLocIndex: 4, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.OPEN },
+      { orderOffset: 2, productIndex: 3, quantity: 2, fromLocIndex: 1, toLocIndex: 4, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.DONE },
+      { orderOffset: 3, productIndex: 1, quantity: 20, fromLocIndex: 5, toLocIndex: 10, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.OPEN },
+      { orderOffset: 3, productIndex: 5, quantity: 30, fromLocIndex: 7, toLocIndex: 5, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.OPEN },
+      { orderOffset: 4, productIndex: 6, quantity: 12, fromLocIndex: 6, toLocIndex: 9, fromHuIndex: 5, toHuIndex: null, status: TransferLineStatus.DONE },
+      { orderOffset: 4, productIndex: 7, quantity: 15, fromLocIndex: 4, toLocIndex: 7, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.OPEN },
+      { orderOffset: 5, productIndex: 4, quantity: 100, fromLocIndex: 8, toLocIndex: 5, fromHuIndex: 3, toHuIndex: null, status: TransferLineStatus.DONE },
+      { orderOffset: 5, productIndex: 2, quantity: 10, fromLocIndex: 11, toLocIndex: 12, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.DONE },
+      { orderOffset: 2, productIndex: 5, quantity: 4, fromLocIndex: 7, toLocIndex: 4, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.OPEN },
+    ];
+    const tlRows: TransferLineOrmEntity[] = [];
+    for (let rep = 0; rep < SEED_ROW_MULTIPLIER; rep++) {
+      const baseOrder = rep * transferOrderTemplates.length;
+      const baseProduct = rep * PRODUCT_TEMPLATES.length;
+      const baseHu = rep * huTemplates.length;
+      for (const lt of transferLineTemplates) {
+        const oid = transferOrderIds[baseOrder + lt.orderOffset];
+        const pid = productIds[baseProduct + (lt.productIndex % PRODUCT_TEMPLATES.length)];
+        const fromId = locationIds[locationIndexFor(rep, lt.fromLocIndex)];
+        const toId = locationIds[locationIndexFor(rep, lt.toLocIndex)];
+        const fromHu =
+          lt.fromHuIndex === null ? null : huIds[baseHu + (lt.fromHuIndex % huTemplates.length)];
+        const toHu =
+          lt.toHuIndex === null ? null : huIds[baseHu + (lt.toHuIndex % huTemplates.length)];
+        tlRows.push({
+          transferOrderId: oid,
+          productId: pid,
+          quantity: lt.quantity,
+          fromLocationId: fromId,
+          toLocationId: toId,
+          fromHandlingUnitId: fromHu,
+          toHandlingUnitId: toHu,
+          status: lt.status,
+        } as TransferLineOrmEntity);
+      }
+    }
+    await this.chunkSave(this.transferLines, tlRows);
+  }
+
+  private async chunkSave<T extends object>(
+    repo: Repository<T>,
+    rows: T[],
+    size = 500,
+  ): Promise<void> {
+    for (let i = 0; i < rows.length; i += size) {
+      await repo.save(rows.slice(i, i + size) as T[]);
+    }
   }
 }
