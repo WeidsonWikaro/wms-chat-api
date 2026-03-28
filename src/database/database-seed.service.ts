@@ -62,18 +62,78 @@ const ZONE_TEMPLATES: ReadonlyArray<{
   name: string;
   zoneType: ZoneType;
 }> = [
-  { warehouseIndex: 0, code: 'STOR-A', name: 'Armazenagem bloco A', zoneType: ZoneType.STORAGE },
-  { warehouseIndex: 0, code: 'PICK-F', name: 'Separação frente de loja', zoneType: ZoneType.PICKING },
-  { warehouseIndex: 0, code: 'SHIP-1', name: 'Doca de expedição 1', zoneType: ZoneType.SHIPPING },
-  { warehouseIndex: 0, code: 'RCV-01', name: 'Recebimento principal', zoneType: ZoneType.RECEIVING },
-  { warehouseIndex: 0, code: 'STG-01', name: 'Área de consolidação', zoneType: ZoneType.STAGING },
-  { warehouseIndex: 0, code: 'STOR-B', name: 'Armazenagem bloco B', zoneType: ZoneType.STORAGE },
-  { warehouseIndex: 1, code: 'STOR-S', name: 'Armazenagem Sul', zoneType: ZoneType.STORAGE },
-  { warehouseIndex: 1, code: 'RCV-S', name: 'Recebimento Sul', zoneType: ZoneType.RECEIVING },
-  { warehouseIndex: 1, code: 'SHIP-S', name: 'Expedição Sul', zoneType: ZoneType.SHIPPING },
-  { warehouseIndex: 1, code: 'PICK-S', name: 'Separação Sul', zoneType: ZoneType.PICKING },
-  { warehouseIndex: 2, code: 'STOR-N', name: 'Armazenagem Nordeste', zoneType: ZoneType.STORAGE },
-  { warehouseIndex: 3, code: 'PICK-M', name: 'Separação expressa BH', zoneType: ZoneType.PICKING },
+  {
+    warehouseIndex: 0,
+    code: 'STOR-A',
+    name: 'Armazenagem bloco A',
+    zoneType: ZoneType.STORAGE,
+  },
+  {
+    warehouseIndex: 0,
+    code: 'PICK-F',
+    name: 'Separação frente de loja',
+    zoneType: ZoneType.PICKING,
+  },
+  {
+    warehouseIndex: 0,
+    code: 'SHIP-1',
+    name: 'Doca de expedição 1',
+    zoneType: ZoneType.SHIPPING,
+  },
+  {
+    warehouseIndex: 0,
+    code: 'RCV-01',
+    name: 'Recebimento principal',
+    zoneType: ZoneType.RECEIVING,
+  },
+  {
+    warehouseIndex: 0,
+    code: 'STG-01',
+    name: 'Área de consolidação',
+    zoneType: ZoneType.STAGING,
+  },
+  {
+    warehouseIndex: 0,
+    code: 'STOR-B',
+    name: 'Armazenagem bloco B',
+    zoneType: ZoneType.STORAGE,
+  },
+  {
+    warehouseIndex: 1,
+    code: 'STOR-S',
+    name: 'Armazenagem Sul',
+    zoneType: ZoneType.STORAGE,
+  },
+  {
+    warehouseIndex: 1,
+    code: 'RCV-S',
+    name: 'Recebimento Sul',
+    zoneType: ZoneType.RECEIVING,
+  },
+  {
+    warehouseIndex: 1,
+    code: 'SHIP-S',
+    name: 'Expedição Sul',
+    zoneType: ZoneType.SHIPPING,
+  },
+  {
+    warehouseIndex: 1,
+    code: 'PICK-S',
+    name: 'Separação Sul',
+    zoneType: ZoneType.PICKING,
+  },
+  {
+    warehouseIndex: 2,
+    code: 'STOR-N',
+    name: 'Armazenagem Nordeste',
+    zoneType: ZoneType.STORAGE,
+  },
+  {
+    warehouseIndex: 3,
+    code: 'PICK-M',
+    name: 'Separação expressa BH',
+    zoneType: ZoneType.PICKING,
+  },
 ];
 
 const LOCATION_TEMPLATES: ReadonlyArray<{
@@ -92,10 +152,28 @@ const LOCATION_TEMPLATES: ReadonlyArray<{
   { zoneTemplateIndex: 4, code: 'RCV-D1', aisle: 'R', bay: '01', level: null },
   { zoneTemplateIndex: 5, code: 'STG-01', aisle: 'G', bay: '01', level: '1' },
   { zoneTemplateIndex: 5, code: 'B-02-01', aisle: 'B', bay: '02', level: '01' },
-  { zoneTemplateIndex: 8, code: 'DOCK-S1', aisle: 'DS', bay: '01', level: null },
+  {
+    zoneTemplateIndex: 8,
+    code: 'DOCK-S1',
+    aisle: 'DS',
+    bay: '01',
+    level: null,
+  },
   { zoneTemplateIndex: 9, code: 'PFS-01', aisle: 'PS', bay: '01', level: '1' },
-  { zoneTemplateIndex: 10, code: 'N-01-01', aisle: 'N', bay: '01', level: '01' },
-  { zoneTemplateIndex: 11, code: 'M-EXP-01', aisle: 'M', bay: '01', level: '1' },
+  {
+    zoneTemplateIndex: 10,
+    code: 'N-01-01',
+    aisle: 'N',
+    bay: '01',
+    level: '01',
+  },
+  {
+    zoneTemplateIndex: 11,
+    code: 'M-EXP-01',
+    aisle: 'M',
+    bay: '01',
+    level: '1',
+  },
 ];
 
 const PRODUCT_TEMPLATES: ReadonlyArray<{
@@ -154,14 +232,15 @@ const USER_FIXED_IDS: ReadonlyArray<string> = [
   'a1000000-0000-4000-8000-000000000006',
 ];
 
-const USER_DISPLAY_BASE: ReadonlyArray<{ code: string; displayName: string }> = [
-  { code: 'U-ALICE', displayName: 'Alice Silva' },
-  { code: 'U-BOB', displayName: 'Bob Santos' },
-  { code: 'U-CAROL', displayName: 'Carol Oliveira' },
-  { code: 'U-DANIELA', displayName: 'Daniela Lima' },
-  { code: 'U-EDUARDO', displayName: 'Eduardo Ferreira' },
-  { code: 'U-FERNANDA', displayName: 'Fernanda Costa' },
-];
+const USER_DISPLAY_BASE: ReadonlyArray<{ code: string; displayName: string }> =
+  [
+    { code: 'U-ALICE', displayName: 'Alice Silva' },
+    { code: 'U-BOB', displayName: 'Bob Santos' },
+    { code: 'U-CAROL', displayName: 'Carol Oliveira' },
+    { code: 'U-DANIELA', displayName: 'Daniela Lima' },
+    { code: 'U-EDUARDO', displayName: 'Eduardo Ferreira' },
+    { code: 'U-FERNANDA', displayName: 'Fernanda Costa' },
+  ];
 
 const PRODUCT_FIXED_IDS: ReadonlyArray<string> = [
   'e1000000-0000-4000-8000-000000000001',
@@ -363,7 +442,7 @@ export class DatabaseSeedService {
         zoneId: zoneIds[zoneIndex],
         code: `G-${String(l + 1).padStart(4, '0')}`,
         aisle: `A${String((l % 24) + 1).padStart(2, '0')}`,
-        bay: `B${String(Math.floor(l / 24) % 40 + 1).padStart(2, '0')}`,
+        bay: `B${String((Math.floor(l / 24) % 40) + 1).padStart(2, '0')}`,
         level: String((l % 5) + 1),
         active: true,
       } as LocationOrmEntity);
@@ -376,7 +455,8 @@ export class DatabaseSeedService {
     for (let p = 0; p < productCount; p++) {
       const tpl = PRODUCT_TEMPLATES[p % PRODUCT_TEMPLATES.length];
       const rep = Math.floor(p / PRODUCT_TEMPLATES.length);
-      const id = p < PRODUCT_FIXED_IDS.length ? PRODUCT_FIXED_IDS[p] : randomUUID();
+      const id =
+        p < PRODUCT_FIXED_IDS.length ? PRODUCT_FIXED_IDS[p] : randomUUID();
       productIds.push(id);
       productRows.push({
         id,
@@ -393,12 +473,42 @@ export class DatabaseSeedService {
       status: HandlingUnitStatus;
       locationIndex: number;
     }> = [
-      { code: 'SSCC-SEED-PALLET-01', type: HandlingUnitType.PALLET, status: HandlingUnitStatus.IN_USE, locationIndex: 0 },
-      { code: 'TOTE-SEED-VAZIO-01', type: HandlingUnitType.TOTE, status: HandlingUnitStatus.EMPTY, locationIndex: 2 },
-      { code: 'CX-SEED-BLOQUEADA-01', type: HandlingUnitType.CASE, status: HandlingUnitStatus.BLOCKED, locationIndex: 1 },
-      { code: 'SSCC-SEED-PALLET-02', type: HandlingUnitType.PALLET, status: HandlingUnitStatus.IN_USE, locationIndex: 8 },
-      { code: 'TOTE-SEED-EM-USO-02', type: HandlingUnitType.TOTE, status: HandlingUnitStatus.IN_USE, locationIndex: 10 },
-      { code: 'CX-SEED-REC-01', type: HandlingUnitType.CASE, status: HandlingUnitStatus.IN_USE, locationIndex: 6 },
+      {
+        code: 'SSCC-SEED-PALLET-01',
+        type: HandlingUnitType.PALLET,
+        status: HandlingUnitStatus.IN_USE,
+        locationIndex: 0,
+      },
+      {
+        code: 'TOTE-SEED-VAZIO-01',
+        type: HandlingUnitType.TOTE,
+        status: HandlingUnitStatus.EMPTY,
+        locationIndex: 2,
+      },
+      {
+        code: 'CX-SEED-BLOQUEADA-01',
+        type: HandlingUnitType.CASE,
+        status: HandlingUnitStatus.BLOCKED,
+        locationIndex: 1,
+      },
+      {
+        code: 'SSCC-SEED-PALLET-02',
+        type: HandlingUnitType.PALLET,
+        status: HandlingUnitStatus.IN_USE,
+        locationIndex: 8,
+      },
+      {
+        code: 'TOTE-SEED-EM-USO-02',
+        type: HandlingUnitType.TOTE,
+        status: HandlingUnitStatus.IN_USE,
+        locationIndex: 10,
+      },
+      {
+        code: 'CX-SEED-REC-01',
+        type: HandlingUnitType.CASE,
+        status: HandlingUnitStatus.IN_USE,
+        locationIndex: 6,
+      },
     ];
     const huRows: HandlingUnitOrmEntity[] = [];
     const huIds: string[] = [];
@@ -426,19 +536,97 @@ export class DatabaseSeedService {
       quantityOnHand: number;
       quantityReserved: number;
     }> = [
-      { productIndex: 0, locationIndex: 0, handlingUnitIndex: 0, quantityOnHand: 240, quantityReserved: 40 },
-      { productIndex: 1, locationIndex: 2, handlingUnitIndex: null, quantityOnHand: 80, quantityReserved: 0 },
-      { productIndex: 2, locationIndex: 3, handlingUnitIndex: null, quantityOnHand: 25, quantityReserved: 10 },
-      { productIndex: 3, locationIndex: 1, handlingUnitIndex: null, quantityOnHand: 12, quantityReserved: 0 },
-      { productIndex: 1, locationIndex: 5, handlingUnitIndex: null, quantityOnHand: 30, quantityReserved: 0 },
-      { productIndex: 4, locationIndex: 5, handlingUnitIndex: null, quantityOnHand: 200, quantityReserved: 24 },
-      { productIndex: 4, locationIndex: 8, handlingUnitIndex: 3, quantityOnHand: 500, quantityReserved: 50 },
-      { productIndex: 5, locationIndex: 7, handlingUnitIndex: null, quantityOnHand: 120, quantityReserved: 0 },
-      { productIndex: 6, locationIndex: 6, handlingUnitIndex: 5, quantityOnHand: 48, quantityReserved: 0 },
-      { productIndex: 7, locationIndex: 4, handlingUnitIndex: null, quantityOnHand: 200, quantityReserved: 20 },
-      { productIndex: 2, locationIndex: 11, handlingUnitIndex: null, quantityOnHand: 60, quantityReserved: 0 },
-      { productIndex: 0, locationIndex: 12, handlingUnitIndex: null, quantityOnHand: 15, quantityReserved: 5 },
-      { productIndex: 3, locationIndex: 10, handlingUnitIndex: 4, quantityOnHand: 8, quantityReserved: 0 },
+      {
+        productIndex: 0,
+        locationIndex: 0,
+        handlingUnitIndex: 0,
+        quantityOnHand: 240,
+        quantityReserved: 40,
+      },
+      {
+        productIndex: 1,
+        locationIndex: 2,
+        handlingUnitIndex: null,
+        quantityOnHand: 80,
+        quantityReserved: 0,
+      },
+      {
+        productIndex: 2,
+        locationIndex: 3,
+        handlingUnitIndex: null,
+        quantityOnHand: 25,
+        quantityReserved: 10,
+      },
+      {
+        productIndex: 3,
+        locationIndex: 1,
+        handlingUnitIndex: null,
+        quantityOnHand: 12,
+        quantityReserved: 0,
+      },
+      {
+        productIndex: 1,
+        locationIndex: 5,
+        handlingUnitIndex: null,
+        quantityOnHand: 30,
+        quantityReserved: 0,
+      },
+      {
+        productIndex: 4,
+        locationIndex: 5,
+        handlingUnitIndex: null,
+        quantityOnHand: 200,
+        quantityReserved: 24,
+      },
+      {
+        productIndex: 4,
+        locationIndex: 8,
+        handlingUnitIndex: 3,
+        quantityOnHand: 500,
+        quantityReserved: 50,
+      },
+      {
+        productIndex: 5,
+        locationIndex: 7,
+        handlingUnitIndex: null,
+        quantityOnHand: 120,
+        quantityReserved: 0,
+      },
+      {
+        productIndex: 6,
+        locationIndex: 6,
+        handlingUnitIndex: 5,
+        quantityOnHand: 48,
+        quantityReserved: 0,
+      },
+      {
+        productIndex: 7,
+        locationIndex: 4,
+        handlingUnitIndex: null,
+        quantityOnHand: 200,
+        quantityReserved: 20,
+      },
+      {
+        productIndex: 2,
+        locationIndex: 11,
+        handlingUnitIndex: null,
+        quantityOnHand: 60,
+        quantityReserved: 0,
+      },
+      {
+        productIndex: 0,
+        locationIndex: 12,
+        handlingUnitIndex: null,
+        quantityOnHand: 15,
+        quantityReserved: 5,
+      },
+      {
+        productIndex: 3,
+        locationIndex: 10,
+        handlingUnitIndex: 4,
+        quantityOnHand: 8,
+        quantityReserved: 0,
+      },
     ];
     const balRows: InventoryBalanceOrmEntity[] = [];
     const balanceCount = balanceTemplates.length * SEED_ROW_MULTIPLIER;
@@ -471,16 +659,96 @@ export class DatabaseSeedService {
       releasedByUserIndex: number | null;
       completedByUserIndex: number | null;
     }> = [
-      { orderNumber: 'PO-SEED-RASCUNHO', warehouseIndex: 0, status: PickOrderStatus.DRAFT, priority: 5, createdByUserIndex: 0, releasedByUserIndex: null, completedByUserIndex: null },
-      { orderNumber: 'PO-SEED-LIBERADO', warehouseIndex: 0, status: PickOrderStatus.RELEASED, priority: 3, createdByUserIndex: 0, releasedByUserIndex: 0, completedByUserIndex: null },
-      { orderNumber: 'PO-SEED-SEPARANDO', warehouseIndex: 0, status: PickOrderStatus.PICKING, priority: 2, createdByUserIndex: 0, releasedByUserIndex: 0, completedByUserIndex: null },
-      { orderNumber: 'PO-SEED-CONCLUIDO', warehouseIndex: 0, status: PickOrderStatus.PICKED, priority: 1, createdByUserIndex: 0, releasedByUserIndex: 0, completedByUserIndex: 1 },
-      { orderNumber: 'PO-SEED-CANCELADO', warehouseIndex: 0, status: PickOrderStatus.CANCELLED, priority: 9, createdByUserIndex: 0, releasedByUserIndex: null, completedByUserIndex: null },
-      { orderNumber: 'PO-SEED-SUL-RASCUNHO', warehouseIndex: 1, status: PickOrderStatus.DRAFT, priority: 6, createdByUserIndex: 5, releasedByUserIndex: null, completedByUserIndex: null },
-      { orderNumber: 'PO-SEED-SUL-LIBERADO', warehouseIndex: 1, status: PickOrderStatus.RELEASED, priority: 4, createdByUserIndex: 5, releasedByUserIndex: 5, completedByUserIndex: null },
-      { orderNumber: 'PO-SEED-SUL-SEPARANDO', warehouseIndex: 1, status: PickOrderStatus.PICKING, priority: 3, createdByUserIndex: 5, releasedByUserIndex: 5, completedByUserIndex: null },
-      { orderNumber: 'PO-SEED-SUL-CONCLUIDO', warehouseIndex: 1, status: PickOrderStatus.PICKED, priority: 2, createdByUserIndex: 5, releasedByUserIndex: 5, completedByUserIndex: 1 },
-      { orderNumber: 'PO-SEED-CANCELADO-2', warehouseIndex: 3, status: PickOrderStatus.CANCELLED, priority: 8, createdByUserIndex: 3, releasedByUserIndex: null, completedByUserIndex: null },
+      {
+        orderNumber: 'PO-SEED-RASCUNHO',
+        warehouseIndex: 0,
+        status: PickOrderStatus.DRAFT,
+        priority: 5,
+        createdByUserIndex: 0,
+        releasedByUserIndex: null,
+        completedByUserIndex: null,
+      },
+      {
+        orderNumber: 'PO-SEED-LIBERADO',
+        warehouseIndex: 0,
+        status: PickOrderStatus.RELEASED,
+        priority: 3,
+        createdByUserIndex: 0,
+        releasedByUserIndex: 0,
+        completedByUserIndex: null,
+      },
+      {
+        orderNumber: 'PO-SEED-SEPARANDO',
+        warehouseIndex: 0,
+        status: PickOrderStatus.PICKING,
+        priority: 2,
+        createdByUserIndex: 0,
+        releasedByUserIndex: 0,
+        completedByUserIndex: null,
+      },
+      {
+        orderNumber: 'PO-SEED-CONCLUIDO',
+        warehouseIndex: 0,
+        status: PickOrderStatus.PICKED,
+        priority: 1,
+        createdByUserIndex: 0,
+        releasedByUserIndex: 0,
+        completedByUserIndex: 1,
+      },
+      {
+        orderNumber: 'PO-SEED-CANCELADO',
+        warehouseIndex: 0,
+        status: PickOrderStatus.CANCELLED,
+        priority: 9,
+        createdByUserIndex: 0,
+        releasedByUserIndex: null,
+        completedByUserIndex: null,
+      },
+      {
+        orderNumber: 'PO-SEED-SUL-RASCUNHO',
+        warehouseIndex: 1,
+        status: PickOrderStatus.DRAFT,
+        priority: 6,
+        createdByUserIndex: 5,
+        releasedByUserIndex: null,
+        completedByUserIndex: null,
+      },
+      {
+        orderNumber: 'PO-SEED-SUL-LIBERADO',
+        warehouseIndex: 1,
+        status: PickOrderStatus.RELEASED,
+        priority: 4,
+        createdByUserIndex: 5,
+        releasedByUserIndex: 5,
+        completedByUserIndex: null,
+      },
+      {
+        orderNumber: 'PO-SEED-SUL-SEPARANDO',
+        warehouseIndex: 1,
+        status: PickOrderStatus.PICKING,
+        priority: 3,
+        createdByUserIndex: 5,
+        releasedByUserIndex: 5,
+        completedByUserIndex: null,
+      },
+      {
+        orderNumber: 'PO-SEED-SUL-CONCLUIDO',
+        warehouseIndex: 1,
+        status: PickOrderStatus.PICKED,
+        priority: 2,
+        createdByUserIndex: 5,
+        releasedByUserIndex: 5,
+        completedByUserIndex: 1,
+      },
+      {
+        orderNumber: 'PO-SEED-CANCELADO-2',
+        warehouseIndex: 3,
+        status: PickOrderStatus.CANCELLED,
+        priority: 8,
+        createdByUserIndex: 3,
+        releasedByUserIndex: null,
+        completedByUserIndex: null,
+      },
     ];
     const poRows: PickOrderOrmEntity[] = [];
     const pickOrderIds: string[] = [];
@@ -497,9 +765,15 @@ export class DatabaseSeedService {
         status: tpl.status,
         priority: tpl.priority,
         createdByUserId: userIds[tpl.createdByUserIndex],
-        releasedByUserId: tpl.releasedByUserIndex === null ? null : userIds[tpl.releasedByUserIndex],
+        releasedByUserId:
+          tpl.releasedByUserIndex === null
+            ? null
+            : userIds[tpl.releasedByUserIndex],
         releasedAt: tpl.releasedByUserIndex === null ? null : now,
-        completedByUserId: tpl.completedByUserIndex === null ? null : userIds[tpl.completedByUserIndex],
+        completedByUserId:
+          tpl.completedByUserIndex === null
+            ? null
+            : userIds[tpl.completedByUserIndex],
         completedAt: tpl.completedByUserIndex === null ? null : now,
       } as PickOrderOrmEntity);
     }
@@ -515,20 +789,132 @@ export class DatabaseSeedService {
       pickedByUserIndex: number | null;
     };
     const pickLineTemplates: ReadonlyArray<PickLineTpl> = [
-      { orderOffset: 0, productIndex: 0, quantityOrdered: 10, quantityPicked: 0, sourceLocationIndex: 0, status: PickLineStatus.OPEN, pickedByUserIndex: null },
-      { orderOffset: 1, productIndex: 1, quantityOrdered: 15, quantityPicked: 0, sourceLocationIndex: 2, status: PickLineStatus.OPEN, pickedByUserIndex: null },
-      { orderOffset: 1, productIndex: 2, quantityOrdered: 5, quantityPicked: 0, sourceLocationIndex: 3, status: PickLineStatus.OPEN, pickedByUserIndex: null },
-      { orderOffset: 2, productIndex: 1, quantityOrdered: 20, quantityPicked: 8, sourceLocationIndex: 2, status: PickLineStatus.PARTIAL, pickedByUserIndex: 1 },
-      { orderOffset: 2, productIndex: 2, quantityOrdered: 10, quantityPicked: 0, sourceLocationIndex: 3, status: PickLineStatus.OPEN, pickedByUserIndex: null },
-      { orderOffset: 3, productIndex: 3, quantityOrdered: 4, quantityPicked: 4, sourceLocationIndex: 1, status: PickLineStatus.DONE, pickedByUserIndex: 1 },
-      { orderOffset: 4, productIndex: 0, quantityOrdered: 99, quantityPicked: 0, sourceLocationIndex: null, status: PickLineStatus.OPEN, pickedByUserIndex: null },
-      { orderOffset: 5, productIndex: 1, quantityOrdered: 12, quantityPicked: 0, sourceLocationIndex: 5, status: PickLineStatus.OPEN, pickedByUserIndex: null },
-      { orderOffset: 6, productIndex: 3, quantityOrdered: 6, quantityPicked: 0, sourceLocationIndex: 10, status: PickLineStatus.OPEN, pickedByUserIndex: null },
-      { orderOffset: 6, productIndex: 4, quantityOrdered: 24, quantityPicked: 0, sourceLocationIndex: 5, status: PickLineStatus.OPEN, pickedByUserIndex: null },
-      { orderOffset: 7, productIndex: 1, quantityOrdered: 18, quantityPicked: 10, sourceLocationIndex: 5, status: PickLineStatus.PARTIAL, pickedByUserIndex: 1 },
-      { orderOffset: 7, productIndex: 7, quantityOrdered: 4, quantityPicked: 0, sourceLocationIndex: 9, status: PickLineStatus.OPEN, pickedByUserIndex: null },
-      { orderOffset: 8, productIndex: 2, quantityOrdered: 8, quantityPicked: 8, sourceLocationIndex: 10, status: PickLineStatus.DONE, pickedByUserIndex: 2 },
-      { orderOffset: 9, productIndex: 0, quantityOrdered: 50, quantityPicked: 0, sourceLocationIndex: 12, status: PickLineStatus.OPEN, pickedByUserIndex: null },
+      {
+        orderOffset: 0,
+        productIndex: 0,
+        quantityOrdered: 10,
+        quantityPicked: 0,
+        sourceLocationIndex: 0,
+        status: PickLineStatus.OPEN,
+        pickedByUserIndex: null,
+      },
+      {
+        orderOffset: 1,
+        productIndex: 1,
+        quantityOrdered: 15,
+        quantityPicked: 0,
+        sourceLocationIndex: 2,
+        status: PickLineStatus.OPEN,
+        pickedByUserIndex: null,
+      },
+      {
+        orderOffset: 1,
+        productIndex: 2,
+        quantityOrdered: 5,
+        quantityPicked: 0,
+        sourceLocationIndex: 3,
+        status: PickLineStatus.OPEN,
+        pickedByUserIndex: null,
+      },
+      {
+        orderOffset: 2,
+        productIndex: 1,
+        quantityOrdered: 20,
+        quantityPicked: 8,
+        sourceLocationIndex: 2,
+        status: PickLineStatus.PARTIAL,
+        pickedByUserIndex: 1,
+      },
+      {
+        orderOffset: 2,
+        productIndex: 2,
+        quantityOrdered: 10,
+        quantityPicked: 0,
+        sourceLocationIndex: 3,
+        status: PickLineStatus.OPEN,
+        pickedByUserIndex: null,
+      },
+      {
+        orderOffset: 3,
+        productIndex: 3,
+        quantityOrdered: 4,
+        quantityPicked: 4,
+        sourceLocationIndex: 1,
+        status: PickLineStatus.DONE,
+        pickedByUserIndex: 1,
+      },
+      {
+        orderOffset: 4,
+        productIndex: 0,
+        quantityOrdered: 99,
+        quantityPicked: 0,
+        sourceLocationIndex: null,
+        status: PickLineStatus.OPEN,
+        pickedByUserIndex: null,
+      },
+      {
+        orderOffset: 5,
+        productIndex: 1,
+        quantityOrdered: 12,
+        quantityPicked: 0,
+        sourceLocationIndex: 5,
+        status: PickLineStatus.OPEN,
+        pickedByUserIndex: null,
+      },
+      {
+        orderOffset: 6,
+        productIndex: 3,
+        quantityOrdered: 6,
+        quantityPicked: 0,
+        sourceLocationIndex: 10,
+        status: PickLineStatus.OPEN,
+        pickedByUserIndex: null,
+      },
+      {
+        orderOffset: 6,
+        productIndex: 4,
+        quantityOrdered: 24,
+        quantityPicked: 0,
+        sourceLocationIndex: 5,
+        status: PickLineStatus.OPEN,
+        pickedByUserIndex: null,
+      },
+      {
+        orderOffset: 7,
+        productIndex: 1,
+        quantityOrdered: 18,
+        quantityPicked: 10,
+        sourceLocationIndex: 5,
+        status: PickLineStatus.PARTIAL,
+        pickedByUserIndex: 1,
+      },
+      {
+        orderOffset: 7,
+        productIndex: 7,
+        quantityOrdered: 4,
+        quantityPicked: 0,
+        sourceLocationIndex: 9,
+        status: PickLineStatus.OPEN,
+        pickedByUserIndex: null,
+      },
+      {
+        orderOffset: 8,
+        productIndex: 2,
+        quantityOrdered: 8,
+        quantityPicked: 8,
+        sourceLocationIndex: 10,
+        status: PickLineStatus.DONE,
+        pickedByUserIndex: 2,
+      },
+      {
+        orderOffset: 9,
+        productIndex: 0,
+        quantityOrdered: 50,
+        quantityPicked: 0,
+        sourceLocationIndex: 12,
+        status: PickLineStatus.OPEN,
+        pickedByUserIndex: null,
+      },
     ];
     const plRows: PickLineOrmEntity[] = [];
     for (let rep = 0; rep < SEED_ROW_MULTIPLIER; rep++) {
@@ -536,7 +922,10 @@ export class DatabaseSeedService {
       const baseProduct = rep * PRODUCT_TEMPLATES.length;
       for (const lt of pickLineTemplates) {
         const oid = pickOrderIds[baseOrder + lt.orderOffset];
-        const pid = productIds[baseProduct + (lt.productIndex % PRODUCT_TEMPLATES.length)];
+        const pid =
+          productIds[
+            baseProduct + (lt.productIndex % PRODUCT_TEMPLATES.length)
+          ];
         const src =
           lt.sourceLocationIndex === null
             ? null
@@ -550,7 +939,9 @@ export class DatabaseSeedService {
           sourceHandlingUnitId: null,
           status: lt.status,
           pickedByUserId:
-            lt.pickedByUserIndex === null ? null : userIds[lt.pickedByUserIndex],
+            lt.pickedByUserIndex === null
+              ? null
+              : userIds[lt.pickedByUserIndex],
           pickedAt: lt.pickedByUserIndex === null ? null : now,
         } as PickLineOrmEntity);
       }
@@ -564,16 +955,53 @@ export class DatabaseSeedService {
       createdByUserIndex: number;
       completedByUserIndex: number | null;
     }> = [
-      { referenceCode: 'TRF-SEED-RASCUNHO', warehouseIndex: 0, status: TransferOrderStatus.DRAFT, createdByUserIndex: 0, completedByUserIndex: null },
-      { referenceCode: 'TRF-SEED-EM-ANDAMENTO', warehouseIndex: 0, status: TransferOrderStatus.IN_PROGRESS, createdByUserIndex: 0, completedByUserIndex: null },
-      { referenceCode: 'TRF-SEED-CONCLUIDO', warehouseIndex: 0, status: TransferOrderStatus.COMPLETED, createdByUserIndex: 0, completedByUserIndex: 2 },
-      { referenceCode: 'TRF-SEED-SUL-RASCUNHO', warehouseIndex: 1, status: TransferOrderStatus.DRAFT, createdByUserIndex: 5, completedByUserIndex: null },
-      { referenceCode: 'TRF-SEED-SUL-ANDAMENTO', warehouseIndex: 1, status: TransferOrderStatus.IN_PROGRESS, createdByUserIndex: 3, completedByUserIndex: null },
-      { referenceCode: 'TRF-SEED-SUL-CONCLUIDO', warehouseIndex: 1, status: TransferOrderStatus.COMPLETED, createdByUserIndex: 4, completedByUserIndex: 2 },
+      {
+        referenceCode: 'TRF-SEED-RASCUNHO',
+        warehouseIndex: 0,
+        status: TransferOrderStatus.DRAFT,
+        createdByUserIndex: 0,
+        completedByUserIndex: null,
+      },
+      {
+        referenceCode: 'TRF-SEED-EM-ANDAMENTO',
+        warehouseIndex: 0,
+        status: TransferOrderStatus.IN_PROGRESS,
+        createdByUserIndex: 0,
+        completedByUserIndex: null,
+      },
+      {
+        referenceCode: 'TRF-SEED-CONCLUIDO',
+        warehouseIndex: 0,
+        status: TransferOrderStatus.COMPLETED,
+        createdByUserIndex: 0,
+        completedByUserIndex: 2,
+      },
+      {
+        referenceCode: 'TRF-SEED-SUL-RASCUNHO',
+        warehouseIndex: 1,
+        status: TransferOrderStatus.DRAFT,
+        createdByUserIndex: 5,
+        completedByUserIndex: null,
+      },
+      {
+        referenceCode: 'TRF-SEED-SUL-ANDAMENTO',
+        warehouseIndex: 1,
+        status: TransferOrderStatus.IN_PROGRESS,
+        createdByUserIndex: 3,
+        completedByUserIndex: null,
+      },
+      {
+        referenceCode: 'TRF-SEED-SUL-CONCLUIDO',
+        warehouseIndex: 1,
+        status: TransferOrderStatus.COMPLETED,
+        createdByUserIndex: 4,
+        completedByUserIndex: 2,
+      },
     ];
     const toRows: TransferOrderOrmEntity[] = [];
     const transferOrderIds: string[] = [];
-    const transferOrderCount = transferOrderTemplates.length * SEED_ROW_MULTIPLIER;
+    const transferOrderCount =
+      transferOrderTemplates.length * SEED_ROW_MULTIPLIER;
     for (let t = 0; t < transferOrderCount; t++) {
       const tpl = transferOrderTemplates[t % transferOrderTemplates.length];
       const rep = Math.floor(t / transferOrderTemplates.length);
@@ -581,13 +1009,17 @@ export class DatabaseSeedService {
       transferOrderIds.push(id);
       toRows.push({
         id,
-        referenceCode: rep === 0 ? tpl.referenceCode : `${tpl.referenceCode}-R${rep}`,
+        referenceCode:
+          rep === 0 ? tpl.referenceCode : `${tpl.referenceCode}-R${rep}`,
         warehouseId: whIds[tpl.warehouseIndex],
         status: tpl.status,
         createdByUserId: userIds[tpl.createdByUserIndex],
         releasedByUserId: null,
         releasedAt: null,
-        completedByUserId: tpl.completedByUserIndex === null ? null : userIds[tpl.completedByUserIndex],
+        completedByUserId:
+          tpl.completedByUserIndex === null
+            ? null
+            : userIds[tpl.completedByUserIndex],
         completedAt: tpl.completedByUserIndex === null ? null : now,
       } as TransferOrderOrmEntity);
     }
@@ -604,17 +1036,116 @@ export class DatabaseSeedService {
       status: TransferLineStatus;
     };
     const transferLineTemplates: ReadonlyArray<TLineTpl> = [
-      { orderOffset: 0, productIndex: 0, quantity: 12, fromLocIndex: 0, toLocIndex: 2, fromHuIndex: 0, toHuIndex: null, status: TransferLineStatus.OPEN },
-      { orderOffset: 1, productIndex: 1, quantity: 6, fromLocIndex: 2, toLocIndex: 4, fromHuIndex: null, toHuIndex: 1, status: TransferLineStatus.DONE },
-      { orderOffset: 1, productIndex: 2, quantity: 3, fromLocIndex: 3, toLocIndex: 4, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.OPEN },
-      { orderOffset: 2, productIndex: 3, quantity: 2, fromLocIndex: 1, toLocIndex: 4, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.DONE },
-      { orderOffset: 3, productIndex: 1, quantity: 20, fromLocIndex: 5, toLocIndex: 10, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.OPEN },
-      { orderOffset: 3, productIndex: 5, quantity: 30, fromLocIndex: 7, toLocIndex: 5, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.OPEN },
-      { orderOffset: 4, productIndex: 6, quantity: 12, fromLocIndex: 6, toLocIndex: 9, fromHuIndex: 5, toHuIndex: null, status: TransferLineStatus.DONE },
-      { orderOffset: 4, productIndex: 7, quantity: 15, fromLocIndex: 4, toLocIndex: 7, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.OPEN },
-      { orderOffset: 5, productIndex: 4, quantity: 100, fromLocIndex: 8, toLocIndex: 5, fromHuIndex: 3, toHuIndex: null, status: TransferLineStatus.DONE },
-      { orderOffset: 5, productIndex: 2, quantity: 10, fromLocIndex: 11, toLocIndex: 12, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.DONE },
-      { orderOffset: 2, productIndex: 5, quantity: 4, fromLocIndex: 7, toLocIndex: 4, fromHuIndex: null, toHuIndex: null, status: TransferLineStatus.OPEN },
+      {
+        orderOffset: 0,
+        productIndex: 0,
+        quantity: 12,
+        fromLocIndex: 0,
+        toLocIndex: 2,
+        fromHuIndex: 0,
+        toHuIndex: null,
+        status: TransferLineStatus.OPEN,
+      },
+      {
+        orderOffset: 1,
+        productIndex: 1,
+        quantity: 6,
+        fromLocIndex: 2,
+        toLocIndex: 4,
+        fromHuIndex: null,
+        toHuIndex: 1,
+        status: TransferLineStatus.DONE,
+      },
+      {
+        orderOffset: 1,
+        productIndex: 2,
+        quantity: 3,
+        fromLocIndex: 3,
+        toLocIndex: 4,
+        fromHuIndex: null,
+        toHuIndex: null,
+        status: TransferLineStatus.OPEN,
+      },
+      {
+        orderOffset: 2,
+        productIndex: 3,
+        quantity: 2,
+        fromLocIndex: 1,
+        toLocIndex: 4,
+        fromHuIndex: null,
+        toHuIndex: null,
+        status: TransferLineStatus.DONE,
+      },
+      {
+        orderOffset: 3,
+        productIndex: 1,
+        quantity: 20,
+        fromLocIndex: 5,
+        toLocIndex: 10,
+        fromHuIndex: null,
+        toHuIndex: null,
+        status: TransferLineStatus.OPEN,
+      },
+      {
+        orderOffset: 3,
+        productIndex: 5,
+        quantity: 30,
+        fromLocIndex: 7,
+        toLocIndex: 5,
+        fromHuIndex: null,
+        toHuIndex: null,
+        status: TransferLineStatus.OPEN,
+      },
+      {
+        orderOffset: 4,
+        productIndex: 6,
+        quantity: 12,
+        fromLocIndex: 6,
+        toLocIndex: 9,
+        fromHuIndex: 5,
+        toHuIndex: null,
+        status: TransferLineStatus.DONE,
+      },
+      {
+        orderOffset: 4,
+        productIndex: 7,
+        quantity: 15,
+        fromLocIndex: 4,
+        toLocIndex: 7,
+        fromHuIndex: null,
+        toHuIndex: null,
+        status: TransferLineStatus.OPEN,
+      },
+      {
+        orderOffset: 5,
+        productIndex: 4,
+        quantity: 100,
+        fromLocIndex: 8,
+        toLocIndex: 5,
+        fromHuIndex: 3,
+        toHuIndex: null,
+        status: TransferLineStatus.DONE,
+      },
+      {
+        orderOffset: 5,
+        productIndex: 2,
+        quantity: 10,
+        fromLocIndex: 11,
+        toLocIndex: 12,
+        fromHuIndex: null,
+        toHuIndex: null,
+        status: TransferLineStatus.DONE,
+      },
+      {
+        orderOffset: 2,
+        productIndex: 5,
+        quantity: 4,
+        fromLocIndex: 7,
+        toLocIndex: 4,
+        fromHuIndex: null,
+        toHuIndex: null,
+        status: TransferLineStatus.OPEN,
+      },
     ];
     const tlRows: TransferLineOrmEntity[] = [];
     for (let rep = 0; rep < SEED_ROW_MULTIPLIER; rep++) {
@@ -623,13 +1154,20 @@ export class DatabaseSeedService {
       const baseHu = rep * huTemplates.length;
       for (const lt of transferLineTemplates) {
         const oid = transferOrderIds[baseOrder + lt.orderOffset];
-        const pid = productIds[baseProduct + (lt.productIndex % PRODUCT_TEMPLATES.length)];
+        const pid =
+          productIds[
+            baseProduct + (lt.productIndex % PRODUCT_TEMPLATES.length)
+          ];
         const fromId = locationIds[locationIndexFor(rep, lt.fromLocIndex)];
         const toId = locationIds[locationIndexFor(rep, lt.toLocIndex)];
         const fromHu =
-          lt.fromHuIndex === null ? null : huIds[baseHu + (lt.fromHuIndex % huTemplates.length)];
+          lt.fromHuIndex === null
+            ? null
+            : huIds[baseHu + (lt.fromHuIndex % huTemplates.length)];
         const toHu =
-          lt.toHuIndex === null ? null : huIds[baseHu + (lt.toHuIndex % huTemplates.length)];
+          lt.toHuIndex === null
+            ? null
+            : huIds[baseHu + (lt.toHuIndex % huTemplates.length)];
         tlRows.push({
           transferOrderId: oid,
           productId: pid,
@@ -651,7 +1189,7 @@ export class DatabaseSeedService {
     size = 500,
   ): Promise<void> {
     for (let i = 0; i < rows.length; i += size) {
-      await repo.save(rows.slice(i, i + size) as T[]);
+      await repo.save(rows.slice(i, i + size));
     }
   }
 }

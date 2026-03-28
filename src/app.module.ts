@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { DatabaseSeedModule } from './database/database-seed.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { WmsModule } from './modules/wms/wms.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { WmsModule } from './modules/wms/wms.module';
       }),
     }),
     WmsModule,
+    ChatModule,
     DatabaseSeedModule,
   ],
   controllers: [AppController],
