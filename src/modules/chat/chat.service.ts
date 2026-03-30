@@ -1,8 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import type { Socket } from 'socket.io';
+import type { ChatAssistantPort } from '../llm/ports/chat-assistant.port';
+import { CHAT_ASSISTANT } from '../llm/ports/chat-assistant.port';
 import { parseChatSendPayload } from './chat-validation';
-import { CHAT_PROTOCOL_VERSION, CHAT_WELCOME_MESSAGE } from './chat.constants';
+import type { ChatSendParseSuccess } from './chat-validation';
+import { CHAT_WELCOME_MESSAGE } from './chat.constants';
 
 /** In-memory conversation ownership (Fase 1: single Nest instance). */
 interface ConversationMeta {
@@ -20,18 +23,12 @@ export class ChatService {
   private readonly logger = new Logger(ChatService.name);
   private readonly conversations = new Map<string, ConversationMeta>();
 
-  /**
-   * Stub “LLM” reply: deterministic streaming chunks (replace with real LLM later).
-   */
-  private buildAssistantText(userText: string): string {
-    return (
-      `[WMS Assistant] protocol v${CHAT_PROTOCOL_VERSION} (stub). ` +
-      `You said: ${userText}`
-    );
-  }
+  constructor(
+    @Inject(CHAT_ASSISTANT) private readonly assistant: ChatAssistantPort,
+  ) {}
 
   /**
-   * Após JWT válido: cria conversa, envia saudação no mesmo formato que respostas ao `chat:send`.
+   * Stub welcome (not LLM) — same streaming protocol as assistant replies.
    */
   sendWelcomeAfterConnect(client: Socket, userId: string): void {
     const conversationId = randomUUID();
@@ -83,11 +80,12 @@ export class ChatService {
       });
       return;
     }
+    const parsedSuccess: ChatSendParseSuccess = parsed;
     const {
       conversationId: incomingConvId,
       text,
       clientMessageId,
-    } = parsed.payload;
+    } = parsedSuccess.payload;
     const userId = this.getUserId(client);
     if (!userId) {
       client.emit('chat:error', {
@@ -130,7 +128,46 @@ export class ChatService {
         conversationId: activeConversationId,
         sentAt: userMessageReceivedAt,
       });
-      const full = this.buildAssistantText(text);
+      void this.streamAssistantReply(client, {
+        userId,
+        activeConversationId,
+        parsed: parsedSuccess,
+        assistantMessageId,
+        clientMessageId,
+      });
+    } catch (err) {
+      this.logger.error(err);
+      client.emit('chat:error', {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to process chat message.',
+        clientMessageId,
+        sentAt: nowIso(),
+      });
+    }
+  }
+
+  private async streamAssistantReply(
+    client: Socket,
+    params: {
+      userId: string;
+      activeConversationId: string;
+      parsed: ChatSendParseSuccess;
+      assistantMessageId: string;
+      clientMessageId: string;
+    },
+  ): Promise<void> {
+    const {
+      activeConversationId,
+      parsed,
+      assistantMessageId,
+      clientMessageId,
+    } = params;
+    try {
+      const full = await this.assistant.generateReply({
+        userId: params.userId,
+        activeConversationId,
+        parsed,
+      });
       const chunks = this.splitIntoChunks(full);
       const messageSentAt = nowIso();
       for (const chunk of chunks) {
@@ -149,8 +186,8 @@ export class ChatService {
     } catch (err) {
       this.logger.error(err);
       client.emit('chat:error', {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to process chat message.',
+        code: 'LLM_ERROR',
+        message: 'Assistant failed to generate a reply.',
         clientMessageId,
         sentAt: nowIso(),
       });

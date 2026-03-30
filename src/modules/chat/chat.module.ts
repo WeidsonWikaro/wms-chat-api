@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { SignOptions } from 'jsonwebtoken';
+import { LlmModule } from '../llm/llm.module';
 import { ChatDevTokenController } from './chat-dev-token.controller';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
@@ -9,6 +10,7 @@ import { ChatService } from './chat.service';
 @Module({
   imports: [
     ConfigModule,
+    LlmModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

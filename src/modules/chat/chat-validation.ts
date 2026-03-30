@@ -17,6 +17,9 @@ export type ChatSendParseResult =
   | { ok: true; payload: ChatSendPayload }
   | { ok: false; code: string; message: string; clientMessageId?: string };
 
+/** Narrowing type after `parseChatSendPayload` succeeds (`ok === true`). */
+export type ChatSendParseSuccess = Extract<ChatSendParseResult, { ok: true }>;
+
 /**
  * Validates `chat:send` body (object after Socket.IO deserialization).
  */
