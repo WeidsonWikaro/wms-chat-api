@@ -4,10 +4,12 @@ import type { BaseMessage } from '@langchain/core/messages';
 import { AIMessage } from '@langchain/core/messages';
 import { HumanMessage } from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import type { ProductsService } from '../../wms/products/http/products.service';
 import type { ChatUserTurnContext } from '../interfaces/chat-user-turn-context.interface';
 import type { ChatAssistantPort } from '../ports/chat-assistant.port';
 import { buildWmsChatGraph } from '../graph/wms-chat.graph';
 import { DEFAULT_LLM_GOOGLE_MODEL } from '../llm.constants';
+import { createProductTools } from '../tools/create-product-tools';
 
 @Injectable()
 export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
@@ -15,7 +17,10 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
   private model!: ChatGoogleGenerativeAI;
   private graph!: ReturnType<typeof buildWmsChatGraph>;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly productsService: ProductsService,
+  ) {}
 
   onModuleInit(): void {
     const apiKey = this.config.get<string>('GOOGLE_API_KEY');
@@ -31,15 +36,19 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
       model: modelName,
       temperature: 0.3,
     });
-    this.graph = buildWmsChatGraph(this.model);
-    this.logger.log(`WMS chat graph ready (model=${modelName}).`);
+    const productTools = createProductTools(this.productsService);
+    this.graph = buildWmsChatGraph(this.model, productTools);
+    this.logger.log(
+      `WMS chat graph ready (model=${modelName}, tools=${productTools.length}).`,
+    );
   }
 
   async generateReply(context: ChatUserTurnContext): Promise<string> {
     const text = context.parsed.payload.text;
-    const result = (await this.graph.invoke({
-      messages: [new HumanMessage(text)],
-    })) as { messages: BaseMessage[] };
+    const result = (await this.graph.invoke(
+      { messages: [new HumanMessage(text)] },
+      { recursionLimit: 12 },
+    )) as { messages: BaseMessage[] };
     const last = result.messages[result.messages.length - 1];
     if (last instanceof AIMessage) {
       return this.messageContentToString(last);
