@@ -4,7 +4,7 @@ import type { BaseMessage } from '@langchain/core/messages';
 import { AIMessage } from '@langchain/core/messages';
 import { HumanMessage } from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
-import type { ProductsService } from '../../wms/products/http/products.service';
+import { ProductsService } from '../../wms/products/http/products.service';
 import type { ChatUserTurnContext } from '../interfaces/chat-user-turn-context.interface';
 import type { ChatAssistantPort } from '../ports/chat-assistant.port';
 import { buildWmsChatGraph } from '../graph/wms-chat.graph';
