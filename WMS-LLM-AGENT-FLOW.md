@@ -155,7 +155,36 @@ Somente **ASCII** (sem Mermaid). Lê de cima para baixo; `┌`/`└` marcam ramo
 
 ---
 
-## 3. Conceitos: nó, aresta e aresta condicional
+## 3. Quem “indica” ao agente que deve usar a tool de produto?
+
+Não existe no backend um `if` do tipo “se a mensagem falar de produto → chama tool”. Quem **decide** se pede uma ferramenta (e qual) é o **modelo** (Gemini), com base no que segue.
+
+### O que entra na decisão
+
+1. **`bindTools(tools)`** — Expõe ao modelo o **menu** das ferramentas: nome, **descrição** de cada uma e **schema** dos argumentos (`id`, `barcode`…). Isto **não** força a execução; só diz **o que existe** e **como** deve ser invocado.
+
+2. **Descrições em `create-product-tools.ts`** — Textos como “Busca um produto pelo id (UUID v4)…” / “…pelo código de barras…” orientam o modelo **semanticamente**: em que situação cada tool faz sentido.
+
+3. **`WMS_CHAT_SYSTEM_PROMPT`** (`llm.constants.ts`) — Regras gerais: assistente WMS, português, **usar só as tools** para dados de produto por **UUID** ou **código de barras**, não inventar dados, pedir id/barcode se o utilizador só disser o nome, etc.
+
+4. **Mensagem do utilizador** — O modelo junta system + histórico no estado + texto atual e **infere** se deve responder só em texto ou emitir **tool calls** (nome da tool + argumentos).
+
+### Resumo
+
+| Peça | Papel |
+|------|--------|
+| `bindTools` + metadados das tools | Lista **quais** ferramentas existem e **com que parâmetros**. |
+| Descrições das tools | Sugerem **quando** usar cada uma. |
+| Prompt de sistema | Alinha **regras de negócio** (WMS, id/barcode, não inventar). |
+| Mensagem do utilizador | Dispara a **decisão** do modelo (incluindo “quero dados deste código”). |
+
+O **`toolsCondition`** e o nó **`tools`** só entram **depois**: executam o que o modelo **já pediu** na `AIMessage` (tool calls).
+
+**Nota:** Se o modelo não chamar a tool quando devia, o ajuste costuma ser **reforçar** o system prompt e as descrições das tools (e, se necessário, exemplos no prompt). Só em fluxos muito rígidos faria sentido um **roteamento em código** (classificador) em paralelo ao modelo.
+
+---
+
+## 4. Conceitos: nó, aresta e aresta condicional
 
 ### Nó (`node`)
 
@@ -201,7 +230,7 @@ Uma **aresta condicional** é uma **bifurcação**: depois do nó X, o **próxim
 
 ---
 
-## 4. Métodos do builder do `StateGraph` (referência rápida)
+## 5. Métodos do builder do `StateGraph` (referência rápida)
 
 | Método | Argumentos (ideia) | O que faz |
 |--------|---------------------|-----------|
@@ -215,7 +244,7 @@ Métodos **antigos** (substituídos por `addEdge`): `setEntryPoint` / `setFinish
 
 ---
 
-## 5. Funções prontas para `addConditionalEdges` (prebuilt)
+## 6. Funções prontas para `addConditionalEdges` (prebuilt)
 
 No **`@langchain/langgraph/prebuilt`**, o helper mais usado para o padrão **modelo + ToolNode** é:
 
@@ -227,7 +256,7 @@ Para outras regras (intenção, flags no estado, etc.), costuma-se escrever uma 
 
 ---
 
-## 6. Ficheiros principais envolvidos
+## 7. Ficheiros principais envolvidos
 
 | Ficheiro | Papel |
 |----------|--------|
