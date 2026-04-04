@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ProductsModule } from '../wms/products/products.module';
+import { RagModule } from '../rag/rag.module';
+import { WmsModule } from '../wms/wms.module';
 import { CHAT_ASSISTANT } from './ports/chat-assistant.port';
 import { LlmAgentService } from './services/llm-agent.service';
 
 @Module({
-  imports: [ConfigModule, ProductsModule],
+  imports: [ConfigModule, WmsModule, RagModule],
   providers: [
     LlmAgentService,
     { provide: CHAT_ASSISTANT, useExisting: LlmAgentService },

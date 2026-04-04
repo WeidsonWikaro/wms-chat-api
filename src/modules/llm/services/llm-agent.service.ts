@@ -4,12 +4,20 @@ import type { BaseMessage } from '@langchain/core/messages';
 import { AIMessage } from '@langchain/core/messages';
 import { HumanMessage } from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { HandlingUnitsService } from '../../wms/handling-unit/http/handling-units.service';
+import { LocationsService } from '../../wms/location/http/locations.service';
 import { ProductsService } from '../../wms/products/http/products.service';
+import { WarehousesService } from '../../wms/warehouse/http/warehouses.service';
+import { WmsUsersService } from '../../wms/wms-user/http/wms-users.service';
+import { ZonesService } from '../../wms/zone/http/zones.service';
+import { RagSearchService } from '../../rag/services/rag-search.service';
 import type { ChatUserTurnContext } from '../interfaces/chat-user-turn-context.interface';
 import type { ChatAssistantPort } from '../ports/chat-assistant.port';
 import { buildWmsChatGraph } from '../graph/wms-chat.graph';
 import { DEFAULT_LLM_GOOGLE_MODEL } from '../llm.constants';
 import { createProductTools } from '../tools/create-product-tools';
+import { createRagTools } from '../../rag/tools/create-rag-tools';
+import { createWmsLookupTools } from '../tools/create-wms-lookup-tools';
 
 @Injectable()
 export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
@@ -20,6 +28,12 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
   constructor(
     private readonly config: ConfigService,
     private readonly productsService: ProductsService,
+    private readonly wmsUsersService: WmsUsersService,
+    private readonly warehousesService: WarehousesService,
+    private readonly zonesService: ZonesService,
+    private readonly locationsService: LocationsService,
+    private readonly handlingUnitsService: HandlingUnitsService,
+    private readonly ragSearchService: RagSearchService,
   ) {}
 
   onModuleInit(): void {
@@ -37,9 +51,18 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
       temperature: 0.3,
     });
     const productTools = createProductTools(this.productsService);
-    this.graph = buildWmsChatGraph(this.model, productTools);
+    const wmsLookupTools = createWmsLookupTools({
+      wmsUsersService: this.wmsUsersService,
+      warehousesService: this.warehousesService,
+      zonesService: this.zonesService,
+      locationsService: this.locationsService,
+      handlingUnitsService: this.handlingUnitsService,
+    });
+    const ragTools = createRagTools(this.ragSearchService);
+    const allTools = [...productTools, ...wmsLookupTools, ...ragTools];
+    this.graph = buildWmsChatGraph(this.model, allTools);
     this.logger.log(
-      `WMS chat graph ready (model=${modelName}, tools=${productTools.length}).`,
+      `WMS chat graph ready (model=${modelName}, tools=${allTools.length}).`,
     );
   }
 

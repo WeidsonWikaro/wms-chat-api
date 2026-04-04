@@ -1,98 +1,124 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# chat-api
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API em [NestJS](https://nestjs.com/) para chat (Socket.IO, JWT) com **RAG** sobre documentos Markdown, usando **PostgreSQL** com a extensão **pgvector** para embeddings e busca semântica.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## O que inclui
 
-## Description
+- Servidor HTTP (prefixo `/api`) e documentação Swagger em `/api/docs` quando a API estiver em execução.
+- Integração com LLM/embeddings (Google Gemini via LangChain), de acordo com as variáveis do `.env`.
+- Ingestão de arquivos `.md` da pasta `docs/` para a tabela `rag_document_chunks` (comando `rag:ingest`).
+- Banco de dados via Docker: imagem `pgvector/pgvector` (Postgres 16 + pgvector).
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Documentação extra sobre tamanho de chunks: [RAG-CHUNK-SIZING.md](./RAG-CHUNK-SIZING.md).
 
-## Project setup
+## Requisitos
 
-```bash
-$ npm install
-```
+- Node.js (LTS recomendado)
+- Yarn ou npm
+- Docker (para o Postgres com pgvector)
+- Chave **Google AI** (`GOOGLE_API_KEY`) para embeddings e, em geral, para o LLM em desenvolvimento
 
-## Compile and run the project
+## Configuração
 
-```bash
-# development
-$ npm run start
+1. Copie `.env.example` para `.env` na raiz do projeto.
+2. Ajuste pelo menos:
+   - `JWT_SECRET`
+   - `GOOGLE_API_KEY`
+   - Variáveis `DB_*` se você não for usar os valores padrão abaixo.
 
-# watch mode
-$ npm run start:dev
+Valores alinhados ao `docker-compose.yml` (desenvolvimento local):
 
-# production mode
-$ npm run start:prod
-```
+| Variável       | Valor típico |
+|----------------|--------------|
+| `DB_HOST`      | `127.0.0.1`  |
+| `DB_PORT`      | `5433` (mapeamento no `docker-compose.yml`) |
+| `DB_USER`      | `postgres`   |
+| `DB_PASSWORD`  | `postgres`   |
+| `DB_NAME`      | `chat_api`   |
+| `DB_SYNC`      | `true` (só dev; em produção use migrações e `false`) |
 
-## Run tests
+Opcional para o RAG: `RAG_DOCS_PATH` (padrão: pasta `docs/` na raiz). A dimensão da coluna `vector` vem de uma **chamada de probe** ao modelo de embedding (Gemini), salvo `RAG_VECTOR_DIMENSIONS` se quiseres forçar um valor (ex.: testes).
+
+## Instalar dependências
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+yarn install
 ```
 
-## Deployment
+## Subir o Postgres (Docker)
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Na raiz do projeto:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+yarn docker:up
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+É o mesmo que `docker compose up -d`. No **host** a porta é **5433** (mapeada para 5432 dentro do container); o banco `chat_api` já vem criado pelo compose.
 
-## Resources
+Comandos úteis: `yarn docker:ps`, `yarn docker:logs`, `yarn docker:down` (os dados persistem no volume `chat_api_pgdata` até o volume ser removido).
 
-Check out a few resources that may come in handy when working with NestJS:
+## Rodar a API
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+# desenvolvimento com reload
+yarn start:dev
 
-## Support
+# produção (após o build)
+yarn build && yarn start:prod
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Por padrão a API escuta na porta definida em `PORT` (ex.: `3001`). Swagger: `http://localhost:3001/api/docs` (ajuste conforme o seu `PORT`).
 
-## Stay in touch
+## Seeds e ingest RAG
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Com o container **em execução** e o `.env` correto (incluindo `GOOGLE_API_KEY` para o ingest):
 
-## License
+```bash
+# Popular dados iniciais (seed)
+yarn seed
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# Indexar Markdown em docs/ (recursivo) → pgvector
+yarn rag:ingest
+```
+
+Execute o `rag:ingest` na **raiz do projeto** (a pasta de documentos é resolvida a partir do diretório de trabalho atual). Se não houver arquivos `.md` na pasta configurada, o comando avisa e não grava chunks.
+
+## Consultar o banco no DBeaver (ou outro cliente SQL)
+
+Qualquer cliente PostgreSQL serve; os dados do RAG ficam na tabela **`rag_document_chunks`**.
+
+1. Nova conexão → PostgreSQL.
+2. **Host:** `127.0.0.1` · **Port:** `5433` · **Database:** `chat_api` · **User:** `postgres` · **Password:** `postgres`.
+3. Testar e salvar.
+
+Exemplo de consulta leve (evita trazer embeddings inteiros sem necessidade):
+
+```sql
+SELECT id, source_path, chunk_index, length(content) AS content_len
+FROM rag_document_chunks
+LIMIT 20;
+```
+
+## Scripts npm/yarn
+
+| Script | Descrição |
+|--------|-----------|
+| `start` / `start:dev` / `start:prod` | Sobe a API NestJS |
+| `build` | Compilação TypeScript → `dist/` |
+| `seed` | Build + executa seeds (`dist/seed.js`) |
+| `rag:ingest` | Build + indexa `docs/` no pgvector |
+| `docker:up` / `docker:down` | Sobe ou derruba o container Postgres |
+| `docker:logs` | Logs do serviço `db` |
+| `test` | Testes unitários |
+
+## Testes
+
+```bash
+yarn test
+yarn test:e2e
+yarn test:cov
+```
+
+## Licença
+
+UNLICENSED (projeto privado). O framework NestJS é [MIT](https://github.com/nestjs/nest/blob/master/LICENSE).

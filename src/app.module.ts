@@ -4,7 +4,33 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { DatabaseSeedModule } from './database/database-seed.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { RagModule } from './modules/rag/rag.module';
 import { WmsModule } from './modules/wms/wms.module';
+
+function envString(
+  config: ConfigService,
+  key: string,
+  defaultValue: string,
+): string {
+  const raw = config.get<string>(key);
+  if (raw === undefined || raw === null) {
+    return defaultValue;
+  }
+  const trimmed = String(raw).replace(/^\uFEFF/, '').trim();
+  return trimmed.length > 0 ? trimmed : defaultValue;
+}
+
+function postgresUrl(config: ConfigService): string {
+  let host = envString(config, 'DB_HOST', '127.0.0.1');
+  if (host === 'localhost') {
+    host = '127.0.0.1';
+  }
+  const port = envString(config, 'DB_PORT', '5433');
+  const user = encodeURIComponent(envString(config, 'DB_USER', 'postgres'));
+  const pass = encodeURIComponent(envString(config, 'DB_PASSWORD', 'postgres'));
+  const db = encodeURIComponent(envString(config, 'DB_NAME', 'chat_api'));
+  return `postgresql://${user}:${pass}@${host}:${port}/${db}`;
+}
 
 @Module({
   imports: [
@@ -15,21 +41,21 @@ import { WmsModule } from './modules/wms/wms.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres' as const,
-        host: config.get<string>('DB_HOST', 'localhost'),
-        port: Number(config.get<string>('DB_PORT', '5432')),
-        username: config.get<string>('DB_USER', 'postgres'),
-        password: config.get<string>('DB_PASSWORD', 'postgres'),
-        database: config.get<string>('DB_NAME', 'chat_api'),
-        autoLoadEntities: true,
-        synchronize:
-          config.get<string>('DB_SYNC', 'true').toLowerCase() === 'true',
-        logging:
-          config.get<string>('DB_LOGGING', 'false').toLowerCase() === 'true',
-      }),
+      useFactory: (config: ConfigService) => {
+        delete process.env.PGPASSWORD;
+        return {
+          type: 'postgres' as const,
+          url: postgresUrl(config),
+          autoLoadEntities: true,
+          synchronize:
+            config.get<string>('DB_SYNC', 'true').toLowerCase() === 'true',
+          logging:
+            config.get<string>('DB_LOGGING', 'false').toLowerCase() === 'true',
+        };
+      },
     }),
     WmsModule,
+    RagModule,
     ChatModule,
     DatabaseSeedModule,
   ],

@@ -115,6 +115,14 @@ const wmsProviders = [
   imports: [ProductsModule, TypeOrmModule.forFeature(wmsEntities)],
   controllers: wmsControllers,
   providers: wmsProviders,
-  exports: [TypeOrmModule, ProductsModule],
+  exports: [
+    TypeOrmModule,
+    ProductsModule,
+    WmsUsersService,
+    WarehousesService,
+    ZonesService,
+    LocationsService,
+    HandlingUnitsService,
+  ],
 })
 export class WmsModule {}

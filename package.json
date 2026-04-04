@@ -18,9 +18,15 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "seed": "nest build && node dist/seed.js"
+    "seed": "nest build && node dist/seed.js",
+    "rag:ingest": "nest build && node dist/rag-ingest.js",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f db",
+    "docker:ps": "docker compose ps"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@langchain/core": "^1.1.36",
     "@langchain/google-genai": "^2.1.26",
     "@langchain/langgraph": "^1.2.6",
