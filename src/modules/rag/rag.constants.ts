@@ -22,6 +22,12 @@ export const RAG_MIN_CHUNK_TOKENS = 96;
 /** Quantidade de trechos devolvidos na busca semântica (tool RAG). */
 export const RAG_DEFAULT_TOP_K = 5;
 
+/**
+ * Timeout da busca RAG (embedding + pgvector), em ms.
+ * Env: `RAG_SEARCH_TIMEOUT_MS` (omitir ou 0 = sem timeout na camada de serviço).
+ */
+export const DEFAULT_RAG_SEARCH_TIMEOUT_MS = 30_000;
+
 export function getRagChunkMaxTokens(): number {
   return Math.floor(
     GEMINI_EMBEDDING_001_MAX_INPUT_TOKENS * RAG_CHUNK_TOKEN_RATIO,

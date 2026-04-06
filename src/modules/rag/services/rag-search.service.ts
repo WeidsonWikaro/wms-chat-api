@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RAG_DEFAULT_TOP_K } from '../rag.constants';
+import {
+  DEFAULT_RAG_SEARCH_TIMEOUT_MS,
+  RAG_DEFAULT_TOP_K,
+} from '../rag.constants';
 import { RagChunkRepository, type RagChunkRow } from '../persistence/rag-chunk.repository';
 import { RagEmbeddingsService } from './rag-embeddings.service';
 
@@ -17,12 +20,24 @@ export interface RagSearchSnippet {
 @Injectable()
 export class RagSearchService {
   private readonly logger = new Logger(RagSearchService.name);
+  private readonly searchTimeoutMs: number | null;
 
   constructor(
     private readonly config: ConfigService,
     private readonly embeddings: RagEmbeddingsService,
     private readonly chunks: RagChunkRepository,
-  ) {}
+  ) {
+    const raw = this.config.get<string | number>('RAG_SEARCH_TIMEOUT_MS');
+    if (raw === '0' || raw === 0) {
+      this.searchTimeoutMs = null;
+    } else if (raw === undefined || raw === null || raw === '') {
+      this.searchTimeoutMs = DEFAULT_RAG_SEARCH_TIMEOUT_MS;
+    } else {
+      const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+      this.searchTimeoutMs =
+        Number.isFinite(n) && n > 0 ? n : DEFAULT_RAG_SEARCH_TIMEOUT_MS;
+    }
+  }
 
   async search(
     query: string,
@@ -32,6 +47,25 @@ export class RagSearchService {
     if (!trimmed) {
       return [];
     }
+    if (this.searchTimeoutMs === null) {
+      return this.searchInternal(trimmed, topK);
+    }
+    const timeoutMs = this.searchTimeoutMs;
+    return Promise.race([
+      this.searchInternal(trimmed, topK),
+      new Promise<RagSearchSnippet[]>((_, reject) => {
+        const t = setTimeout(() => {
+          reject(new Error(`RAG_SEARCH_TIMEOUT_${timeoutMs}ms`));
+        }, timeoutMs);
+        t.unref?.();
+      }),
+    ]);
+  }
+
+  private async searchInternal(
+    trimmed: string,
+    topK: number,
+  ): Promise<RagSearchSnippet[]> {
     const k = Number(
       this.config.get<string>('RAG_TOP_K') ?? String(topK),
     );

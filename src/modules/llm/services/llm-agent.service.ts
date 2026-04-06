@@ -14,16 +14,78 @@ import { RagSearchService } from '../../rag/services/rag-search.service';
 import type { ChatUserTurnContext } from '../interfaces/chat-user-turn-context.interface';
 import type { ChatAssistantPort } from '../ports/chat-assistant.port';
 import { buildWmsChatGraph } from '../graph/wms-chat.graph';
-import { DEFAULT_LLM_GOOGLE_MODEL } from '../llm.constants';
+import {
+  DEFAULT_LLM_GOOGLE_MODEL,
+  DEFAULT_LLM_MAX_SAME_TOOL_STREAK,
+  DEFAULT_LLM_MAX_TOOL_ROUNDS,
+  DEFAULT_LLM_MODEL_CALL_TIMEOUT_MS,
+  DEFAULT_LLM_RECURSION_LIMIT,
+  DEFAULT_LLM_TOOL_NODE_TIMEOUT_MS,
+  DEFAULT_LLM_TURN_TIMEOUT_MS,
+  WMS_CHAT_TURN_TIMEOUT_MESSAGE,
+} from '../llm.constants';
 import { createProductTools } from '../tools/create-product-tools';
 import { createRagTools } from '../../rag/tools/create-rag-tools';
 import { createWmsLookupTools } from '../tools/create-wms-lookup-tools';
+
+function parsePositiveInt(
+  raw: string | number | undefined | null,
+  fallback: number,
+): number {
+  if (raw === undefined || raw === null || raw === '') {
+    return fallback;
+  }
+  const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+  if (!Number.isFinite(n) || n <= 0) {
+    return fallback;
+  }
+  return n;
+}
+
+function parseOptionalPositiveInt(
+  raw: string | number | undefined | null,
+): number | undefined {
+  if (raw === undefined || raw === null || raw === '') {
+    return undefined;
+  }
+  const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10);
+  if (!Number.isFinite(n) || n <= 0) {
+    return undefined;
+  }
+  return n;
+}
+
+function isTurnTimeoutError(err: unknown): boolean {
+  if (err === null || err === undefined) {
+    return false;
+  }
+  if (err instanceof Error) {
+    if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+      return true;
+    }
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ABORT_ERR') {
+      return true;
+    }
+  }
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'name' in err &&
+    (err as { name: string }).name === 'TimeoutError'
+  ) {
+    return true;
+  }
+  return false;
+}
 
 @Injectable()
 export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
   private readonly logger = new Logger(LlmAgentService.name);
   private model!: ChatGoogleGenerativeAI;
   private graph!: ReturnType<typeof buildWmsChatGraph>;
+  private turnTimeoutMs!: number;
+  private recursionLimit!: number;
 
   constructor(
     private readonly config: ConfigService,
@@ -45,6 +107,47 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
     }
     const modelName =
       this.config.get<string>('LLM_GOOGLE_MODEL') ?? DEFAULT_LLM_GOOGLE_MODEL;
+    const rawModelTimeout = this.config.get<string | number>(
+      'LLM_MODEL_CALL_TIMEOUT_MS',
+    );
+    const modelCallTimeoutMs =
+      rawModelTimeout === '0' || rawModelTimeout === 0
+        ? undefined
+        : parseOptionalPositiveInt(rawModelTimeout) ??
+          DEFAULT_LLM_MODEL_CALL_TIMEOUT_MS;
+    const rawToolTimeout = this.config.get<string | number>(
+      'LLM_TOOL_NODE_TIMEOUT_MS',
+    );
+    const toolNodeTimeoutMs =
+      rawToolTimeout === '0' || rawToolTimeout === 0
+        ? undefined
+        : parseOptionalPositiveInt(rawToolTimeout) ??
+          DEFAULT_LLM_TOOL_NODE_TIMEOUT_MS;
+    this.turnTimeoutMs = parsePositiveInt(
+      this.config.get<string | number>('LLM_TURN_TIMEOUT_MS'),
+      DEFAULT_LLM_TURN_TIMEOUT_MS,
+    );
+    const maxToolRounds = Math.max(
+      1,
+      parsePositiveInt(
+        this.config.get<string | number>('LLM_MAX_TOOL_ROUNDS'),
+        DEFAULT_LLM_MAX_TOOL_ROUNDS,
+      ),
+    );
+    const maxSameToolStreak = Math.max(
+      2,
+      parsePositiveInt(
+        this.config.get<string | number>('LLM_MAX_SAME_TOOL_STREAK'),
+        DEFAULT_LLM_MAX_SAME_TOOL_STREAK,
+      ),
+    );
+    this.recursionLimit = Math.max(
+      24,
+      parsePositiveInt(
+        this.config.get<string | number>('LLM_RECURSION_LIMIT'),
+        Math.max(DEFAULT_LLM_RECURSION_LIMIT, maxToolRounds * 4 + 12),
+      ),
+    );
     this.model = new ChatGoogleGenerativeAI({
       apiKey,
       model: modelName,
@@ -60,24 +163,47 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
     });
     const ragTools = createRagTools(this.ragSearchService);
     const allTools = [...productTools, ...wmsLookupTools, ...ragTools];
-    this.graph = buildWmsChatGraph(this.model, allTools);
+    this.graph = buildWmsChatGraph(this.model, allTools, {
+      limits: { maxToolRounds, maxSameToolStreak },
+      modelCallTimeoutMs,
+      toolNodeTimeoutMs,
+    });
     this.logger.log(
-      `WMS chat graph ready (model=${modelName}, tools=${allTools.length}).`,
+      `WMS chat graph ready (model=${modelName}, tools=${allTools.length}, turnTimeoutMs=${this.turnTimeoutMs}, recursionLimit=${this.recursionLimit}, maxToolRounds=${maxToolRounds}, maxSameToolStreak=${maxSameToolStreak}).`,
     );
   }
 
   async generateReply(context: ChatUserTurnContext): Promise<string> {
     const text = context.parsed.payload.text;
-    const result = (await this.graph.invoke(
-      { messages: [new HumanMessage(text)] },
-      { recursionLimit: 12 },
-    )) as { messages: BaseMessage[] };
-    const last = result.messages[result.messages.length - 1];
-    if (last instanceof AIMessage) {
-      return this.messageContentToString(last);
+    const signal = AbortSignal.timeout(this.turnTimeoutMs);
+    try {
+      const result = (await this.graph.invoke(
+        {
+          messages: [new HumanMessage(text)],
+          toolRoundCount: 0,
+          lastToolCallsSignature: null,
+          sameToolCallsStreak: 0,
+          haltReason: null,
+        },
+        { recursionLimit: this.recursionLimit, signal },
+      )) as { messages: BaseMessage[] };
+      const last = result.messages[result.messages.length - 1];
+      if (last instanceof AIMessage) {
+        return this.messageContentToString(last);
+      }
+      this.logger.warn(
+        'Last graph message was not AIMessage; coercing to string.',
+      );
+      return String((last as { content?: unknown })?.content ?? '');
+    } catch (err) {
+      if (isTurnTimeoutError(err)) {
+        this.logger.warn(
+          `Turn aborted by timeout after ${this.turnTimeoutMs}ms (socket user=${context.userId}).`,
+        );
+        return WMS_CHAT_TURN_TIMEOUT_MESSAGE;
+      }
+      throw err;
     }
-    this.logger.warn('Last graph message was not AIMessage; coercing to string.');
-    return String((last as { content?: unknown })?.content ?? '');
   }
 
   private messageContentToString(message: AIMessage): string {

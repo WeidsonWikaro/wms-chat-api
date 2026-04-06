@@ -1,6 +1,42 @@
 /** Modelo Gemini padrão quando `LLM_GOOGLE_MODEL` não está definido. */
 export const DEFAULT_LLM_GOOGLE_MODEL = 'gemini-2.5-flash';
 
+/** Timeout do turno inteiro (`graph.invoke`), em ms. Env: `LLM_TURN_TIMEOUT_MS`. */
+export const DEFAULT_LLM_TURN_TIMEOUT_MS = 90_000;
+
+/** Timeout por chamada ao modelo no nó `agent`, em ms. Env: `LLM_MODEL_CALL_TIMEOUT_MS`. */
+export const DEFAULT_LLM_MODEL_CALL_TIMEOUT_MS = 60_000;
+
+/** Timeout por execução do nó de tools, em ms. Env: `LLM_TOOL_NODE_TIMEOUT_MS`. */
+export const DEFAULT_LLM_TOOL_NODE_TIMEOUT_MS = 45_000;
+
+/** Máximo de execuções do nó `tools` por turno. Env: `LLM_MAX_TOOL_ROUNDS`. */
+export const DEFAULT_LLM_MAX_TOOL_ROUNDS = 8;
+
+/**
+ * Encerramento forçado quando o modelo pede a mesma combinação de tools/args repetidas vezes.
+ * Env: `LLM_MAX_SAME_TOOL_STREAK`.
+ */
+export const DEFAULT_LLM_MAX_SAME_TOOL_STREAK = 2;
+
+/**
+ * `recursionLimit` do LangGraph: deve cobrir agent → tools → policy por rodada.
+ * Env: `LLM_RECURSION_LIMIT`. Se omitido, deriva de `LLM_MAX_TOOL_ROUNDS`.
+ */
+export const DEFAULT_LLM_RECURSION_LIMIT = 40;
+
+/** Resposta quando o turno excede `LLM_TURN_TIMEOUT_MS`. */
+export const WMS_CHAT_TURN_TIMEOUT_MESSAGE =
+  'A resposta demorou além do tempo permitido. Tente de novo com uma pergunta mais curta ou mais específica.';
+
+/** Resposta quando `LLM_MAX_TOOL_ROUNDS` é excedido. */
+export const WMS_CHAT_FORCE_END_MAX_TOOL_ROUNDS =
+  'Limite de consultas automáticas ao sistema foi atingido neste turno. Reformule a pergunta ou confira os dados diretamente no WMS.';
+
+/** Resposta quando a mesma ferramenta com os mesmos argumentos é repetida em sequência. */
+export const WMS_CHAT_FORCE_END_REPEATED_TOOLS =
+  'Detectamos repetição da mesma consulta às ferramentas sem avanço. Verifique os identificadores (UUID, código de barras) ou peça ajuda a um supervisor.';
+
 /**
  * Prompt de sistema para o nó LangGraph do assistente WMS.
  * Ajuste quando adicionar mais tools ou RAG.
