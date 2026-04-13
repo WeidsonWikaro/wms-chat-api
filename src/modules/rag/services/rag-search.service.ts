@@ -4,7 +4,10 @@ import {
   DEFAULT_RAG_SEARCH_TIMEOUT_MS,
   RAG_DEFAULT_TOP_K,
 } from '../rag.constants';
-import { RagChunkRepository, type RagChunkRow } from '../persistence/rag-chunk.repository';
+import {
+  RagChunkRepository,
+  type RagChunkRow,
+} from '../persistence/rag-chunk.repository';
 import { RagEmbeddingsService } from './rag-embeddings.service';
 
 export interface RagSearchSnippet {
@@ -66,9 +69,7 @@ export class RagSearchService {
     trimmed: string,
     topK: number,
   ): Promise<RagSearchSnippet[]> {
-    const k = Number(
-      this.config.get<string>('RAG_TOP_K') ?? String(topK),
-    );
+    const k = Number(this.config.get<string>('RAG_TOP_K') ?? String(topK));
     const limit = Number.isFinite(k) && k > 0 ? Math.min(k, 32) : topK;
     const vector = await this.embeddings.embedQuery(trimmed);
     this.assertVectorDimensions(vector);

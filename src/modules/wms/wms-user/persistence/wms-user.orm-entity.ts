@@ -5,6 +5,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { WmsUserRole } from '../../shared/domain/wms-user-role.enum';
 
 @Entity({ name: 'wms_users' })
 export class WmsUserOrmEntity {
@@ -16,6 +17,17 @@ export class WmsUserOrmEntity {
 
   @Column({ type: 'varchar', length: 200 })
   displayName!: string;
+
+  @Column({ type: 'varchar', length: 60, nullable: true })
+  passwordHash!: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: WmsUserRole,
+    enumName: 'wms_user_role_enum',
+    default: WmsUserRole.OPERATOR,
+  })
+  role!: WmsUserRole;
 
   @Column({ type: 'boolean', default: true })
   active!: boolean;

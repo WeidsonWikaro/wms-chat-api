@@ -52,7 +52,7 @@ export class RagSchemaService implements OnModuleInit {
   private async dropTableIfEmbeddingDimensionMismatch(
     expectedDim: number,
   ): Promise<void> {
-    const rows = (await this.dataSource.query(
+    const rows = await this.dataSource.query(
       `
       SELECT (regexp_match(
         pg_catalog.format_type(a.atttypid, a.atttypmod),
@@ -66,7 +66,7 @@ export class RagSchemaService implements OnModuleInit {
         AND a.attname = 'embedding'
         AND NOT a.attisdropped
       `,
-    )) as Array<{ dim: number | null }>;
+    );
     const current = rows[0]?.dim;
     if (current !== undefined && current !== null && current !== expectedDim) {
       this.logger.warn(

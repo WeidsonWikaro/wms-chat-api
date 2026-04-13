@@ -54,14 +54,20 @@ export class RagEmbeddingsService {
         return n;
       }
     }
-    const batch = await this.documentEmbeddings.embedDocuments([' ']);
-    const first = batch[0];
-    if (!first?.length) {
+    /**
+     * `GoogleGenerativeAIEmbeddings.embedDocuments` usa `batchEmbedContents` e, em falha
+     * da API, o LangChain preenche com vetores vazios em vez de lançar — o probe ficava
+     * silencioso. `embedQuery` usa `embedContent` e propaga erros (chave, quota, modelo).
+     */
+    const vector = await this.documentEmbeddings.embedQuery(
+      'embedding dimension probe',
+    );
+    if (!vector.length) {
       throw new Error(
-        'Gemini embedding API returned an empty vector; check model and API key.',
+        'Gemini embedding API returned an empty vector; check GEMINI_EMBEDDING_MODEL and GOOGLE_API_KEY.',
       );
     }
-    this.resolvedDimensions = first.length;
+    this.resolvedDimensions = vector.length;
     return this.resolvedDimensions;
   }
 

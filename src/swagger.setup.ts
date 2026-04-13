@@ -8,7 +8,18 @@ export function setupSwagger(app: INestApplication): void {
       'Backend for the chat frontend. Health check and example Products CRUD (PostgreSQL).',
     )
     .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description:
+          'Access JWT (campo accessToken de POST /api/auth/login ou /api/auth/refresh).',
+      },
+      'access-token',
+    )
     .addTag('health', 'Liveness')
+    .addTag('auth', 'Login e tokens')
     .addTag('products', 'Example CRUD')
     .build();
   const document = SwaggerModule.createDocument(app, config);

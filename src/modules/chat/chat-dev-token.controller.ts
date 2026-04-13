@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { Public } from '../auth/decorators/public.decorator';
+import { WmsUserRole } from '../wms/shared/domain/wms-user-role.enum';
 import {
   ApiBody,
   ApiOkResponse,
@@ -39,6 +41,7 @@ export class DevTokenResponseDto {
  * Dev-only: issues a JWT for Socket.IO `auth.token` testing.
  * Enable with `CHAT_DEV_TOKEN_ENDPOINT=true` (never in production).
  */
+@Public()
 @ApiTags('chat')
 @Controller('chat')
 export class ChatDevTokenController {
@@ -62,7 +65,10 @@ export class ChatDevTokenController {
       throw new NotFoundException();
     }
     const sub = body?.sub?.trim() || 'dev-user';
-    const accessToken = await this.jwtService.signAsync({ sub });
+    const accessToken = await this.jwtService.signAsync({
+      sub,
+      role: WmsUserRole.ADMIN,
+    });
     return {
       accessToken,
       tokenType: 'Bearer',

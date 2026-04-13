@@ -8,7 +8,9 @@ import {
 
 describe('stableStringify', () => {
   it('orders object keys deterministically', () => {
-    expect(stableStringify({ b: 1, a: 2 })).toBe(stableStringify({ a: 2, b: 1 }));
+    expect(stableStringify({ b: 1, a: 2 })).toBe(
+      stableStringify({ a: 2, b: 1 }),
+    );
   });
 });
 
@@ -56,9 +58,7 @@ describe('decideAfterToolsPolicy', () => {
   it('routes to agent on first tool round', () => {
     const ai = new AIMessage({
       content: '',
-      tool_calls: [
-        { name: 't', args: { a: 1 }, id: '1', type: 'tool_call' },
-      ],
+      tool_calls: [{ name: 't', args: { a: 1 }, id: '1', type: 'tool_call' }],
     });
     const tool = new ToolMessage({ content: '{}', tool_call_id: '1' });
     const d = decideAfterToolsPolicy(
@@ -91,9 +91,7 @@ describe('decideAfterToolsPolicy', () => {
   it('forceEnd when tool rounds exceed max', () => {
     const ai = new AIMessage({
       content: '',
-      tool_calls: [
-        { name: 't', args: { a: 2 }, id: '1', type: 'tool_call' },
-      ],
+      tool_calls: [{ name: 't', args: { a: 2 }, id: '1', type: 'tool_call' }],
     });
     const tool = new ToolMessage({ content: '{}', tool_call_id: '1' });
     const d = decideAfterToolsPolicy(

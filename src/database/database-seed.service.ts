@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 import { DataSource, Repository } from 'typeorm';
 import { HandlingUnitOrmEntity } from '../modules/wms/handling-unit/persistence/handling-unit.orm-entity';
@@ -17,6 +18,7 @@ import {
   TransferOrderStatus,
   ZoneType,
 } from '../modules/wms/shared/domain/wms.enums';
+import { WmsUserRole } from '../modules/wms/shared/domain/wms-user-role.enum';
 import { TransferLineOrmEntity } from '../modules/wms/transfer-line/persistence/transfer-line.orm-entity';
 import { TransferOrderOrmEntity } from '../modules/wms/transfer-order/persistence/transfer-order.orm-entity';
 import { WarehouseOrmEntity } from '../modules/wms/warehouse/persistence/warehouse.orm-entity';
@@ -361,6 +363,7 @@ export class DatabaseSeedService {
   private async clearAll(): Promise<void> {
     await this.dataSource.query(`
       TRUNCATE TABLE
+        "auth_refresh_tokens",
         "pick_wave_orders",
         "pick_waves",
         "cycle_count_lines",
@@ -396,10 +399,13 @@ export class DatabaseSeedService {
         id,
         code: codeForUserIndex(i),
         displayName: displayNameForUserIndex(i),
+        passwordHash: null,
+        role: WmsUserRole.OPERATOR,
         active: true,
       } as WmsUserOrmEntity);
     }
     await this.chunkSave(this.wmsUsers, userRows);
+    await this.applySeedLoginUsers();
 
     const zoneRows: ZoneOrmEntity[] = [];
     const zoneIds: string[] = [];
@@ -1181,6 +1187,36 @@ export class DatabaseSeedService {
       }
     }
     await this.chunkSave(this.transferLines, tlRows);
+  }
+
+  /**
+   * Utilizadores com palavra-passe para login em desenvolvimento (ver `.env.example`).
+   * Todos partilham a mesma palavra-passe; perfis distintos para testar roles.
+   */
+  private async applySeedLoginUsers(): Promise<void> {
+    const password = 'DevPass#2026';
+    const hash = await bcrypt.hash(password, 12);
+    const aliceId = USER_FIXED_IDS[0];
+    const bobId = USER_FIXED_IDS[1];
+    const carolId = USER_FIXED_IDS[2];
+    if (aliceId !== undefined) {
+      await this.wmsUsers.update(
+        { id: aliceId },
+        { passwordHash: hash, role: WmsUserRole.ADMIN },
+      );
+    }
+    if (bobId !== undefined) {
+      await this.wmsUsers.update(
+        { id: bobId },
+        { passwordHash: hash, role: WmsUserRole.OPERATOR },
+      );
+    }
+    if (carolId !== undefined) {
+      await this.wmsUsers.update(
+        { id: carolId },
+        { passwordHash: hash, role: WmsUserRole.VIEWER },
+      );
+    }
   }
 
   private async chunkSave<T extends object>(

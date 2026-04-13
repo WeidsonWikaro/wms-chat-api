@@ -113,16 +113,16 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
     const modelCallTimeoutMs =
       rawModelTimeout === '0' || rawModelTimeout === 0
         ? undefined
-        : parseOptionalPositiveInt(rawModelTimeout) ??
-          DEFAULT_LLM_MODEL_CALL_TIMEOUT_MS;
+        : (parseOptionalPositiveInt(rawModelTimeout) ??
+          DEFAULT_LLM_MODEL_CALL_TIMEOUT_MS);
     const rawToolTimeout = this.config.get<string | number>(
       'LLM_TOOL_NODE_TIMEOUT_MS',
     );
     const toolNodeTimeoutMs =
       rawToolTimeout === '0' || rawToolTimeout === 0
         ? undefined
-        : parseOptionalPositiveInt(rawToolTimeout) ??
-          DEFAULT_LLM_TOOL_NODE_TIMEOUT_MS;
+        : (parseOptionalPositiveInt(rawToolTimeout) ??
+          DEFAULT_LLM_TOOL_NODE_TIMEOUT_MS);
     this.turnTimeoutMs = parsePositiveInt(
       this.config.get<string | number>('LLM_TURN_TIMEOUT_MS'),
       DEFAULT_LLM_TURN_TIMEOUT_MS,

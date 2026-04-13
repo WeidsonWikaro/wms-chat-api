@@ -1,8 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { DatabaseSeedModule } from './database/database-seed.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { ChatModule } from './modules/chat/chat.module';
 import { RagModule } from './modules/rag/rag.module';
 import { WmsModule } from './modules/wms/wms.module';
@@ -16,7 +20,9 @@ function envString(
   if (raw === undefined || raw === null) {
     return defaultValue;
   }
-  const trimmed = String(raw).replace(/^\uFEFF/, '').trim();
+  const trimmed = String(raw)
+    .replace(/^\uFEFF/, '')
+    .trim();
   return trimmed.length > 0 ? trimmed : defaultValue;
 }
 
@@ -54,11 +60,16 @@ function postgresUrl(config: ConfigService): string {
         };
       },
     }),
+    AuthModule,
     WmsModule,
     RagModule,
     ChatModule,
     DatabaseSeedModule,
   ],
   controllers: [AppController],
+  providers: [
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+  ],
 })
 export class AppModule {}

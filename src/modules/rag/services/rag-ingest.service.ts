@@ -27,7 +27,10 @@ export class RagIngestService {
   /**
    * Pasta `docs/` na raiz do projeto (cwd em runtime).
    */
-  async ingestFromDocsFolder(): Promise<{ filesProcessed: number; chunksWritten: number }> {
+  async ingestFromDocsFolder(): Promise<{
+    filesProcessed: number;
+    chunksWritten: number;
+  }> {
     await this.schema.ensureSchema();
     const docsRoot = path.resolve(
       process.cwd(),

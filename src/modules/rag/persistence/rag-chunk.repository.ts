@@ -61,7 +61,7 @@ export class RagChunkRepository {
       source_path: string;
       chunk_index: number;
       content: string;
-      distance: string;
+      distance: string | number;
     }>;
     return rows.map((r) => ({
       id: r.id,
@@ -73,9 +73,9 @@ export class RagChunkRepository {
   }
 
   async countChunks(): Promise<number> {
-    const row = (await this.dataSource.query(
+    const row = await this.dataSource.query(
       `SELECT count(*)::int AS c FROM rag_document_chunks`,
-    )) as [{ c: number }];
+    );
     return row[0]?.c ?? 0;
   }
 }

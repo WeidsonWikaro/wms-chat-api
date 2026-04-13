@@ -22,6 +22,7 @@ export class WmsUsersService {
       id: e.id,
       code: e.code,
       displayName: e.displayName,
+      role: e.role,
       active: e.active,
       createdAt: toIso(e.createdAt),
       updatedAt: toIso(e.updatedAt),
@@ -47,6 +48,7 @@ export class WmsUsersService {
         code: dto.code.trim(),
         displayName: dto.displayName.trim(),
         active: dto.active ?? true,
+        role: dto.role ?? undefined,
       });
       const saved = await this.repo.save(row);
       return this.map(saved);
@@ -68,6 +70,9 @@ export class WmsUsersService {
     }
     if (dto.active !== undefined) {
       row.active = dto.active;
+    }
+    if (dto.role !== undefined) {
+      row.role = dto.role;
     }
     try {
       const saved = await this.repo.save(row);

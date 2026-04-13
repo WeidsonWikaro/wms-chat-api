@@ -126,7 +126,7 @@ Detalhe da árvore: ver **`WMS-STRUCTURE.md`**.
 
 ## 8. Segurança e evolução
 
-- Autenticação/autorização: **não assumir** que já existe; ao adicionar, usar Guards Nest e não espalhar lógica nos controllers.
+- Autenticação: módulo `src/modules/auth` — JWT access + refresh (rotação), guards globais (`JwtAuthGuard`, `RolesGuard`), `@Public()` em rotas abertas, `@Roles(...)` onde aplicável (ex.: `integrations` só `ADMIN`). Rotas: `POST /api/auth/login`, `refresh`, `logout`. Guia para o frontend Next: **`CHAT-APP-AUTH-INTEGRATION.md`**.
 - CORS: `CORS_ORIGIN` em lista separada por vírgulas (ver `app.config.ts`).
 - **Logs:** `Logger` do Nest em bootstrap; evitar `console.log` em código de produção novo.
 
@@ -168,6 +168,8 @@ Detalhe da árvore: ver **`WMS-STRUCTURE.md`**.
 | `WMS-MODEL.md` | Modelo de dados e regras de negócio |
 | `WMS-FUNCIONALIDADES-TODO.md` | Roadmap de funcionalidades |
 | `PROJECT-RULES.md` | Este guia (regras do projeto) |
+| `GUIA-AUTENTICACAO-JWT-PT-BR.md` | Guia didático em PT-BR: JWT, refresh, roles, guards e alinhamento com estas regras |
+| `CHAT-APP-AUTH-INTEGRATION.md` | Integração do frontend Next.js (chat-app) com a API de auth |
 
 ---
 

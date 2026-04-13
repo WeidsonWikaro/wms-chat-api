@@ -31,7 +31,10 @@ export class MarkdownChunkTokenService {
     const h2Sections = this.splitByH2Headings(normalized);
     const rawChunks: string[] = [];
     for (const section of h2Sections) {
-      const parts = await this.splitSectionIntoStructuredChunks(section, maxTokens);
+      const parts = await this.splitSectionIntoStructuredChunks(
+        section,
+        maxTokens,
+      );
       rawChunks.push(...parts);
     }
     const merged = await this.mergeSmallChunks(rawChunks, minTokens, maxTokens);
@@ -67,7 +70,9 @@ export class MarkdownChunkTokenService {
     if (h3Parts.length > 1) {
       const out: string[] = [];
       for (const part of h3Parts) {
-        out.push(...(await this.splitSectionIntoStructuredChunks(part, maxTokens)));
+        out.push(
+          ...(await this.splitSectionIntoStructuredChunks(part, maxTokens)),
+        );
       }
       return out;
     }
@@ -118,7 +123,10 @@ export class MarkdownChunkTokenService {
           if (ti.length === 0) {
             break;
           }
-          if (this.isMarkdownTableRow(ti) || this.isMarkdownTableSeparator(ti)) {
+          if (
+            this.isMarkdownTableRow(ti) ||
+            this.isMarkdownTableSeparator(ti)
+          ) {
             i += 1;
           } else {
             break;
@@ -245,8 +253,7 @@ export class MarkdownChunkTokenService {
       const tNext = await this.tokenService.countTokens(next);
       const tCombined = await this.tokenService.countTokens(combined);
       const shouldMerge =
-        tCombined <= maxTokens &&
-        (tAcc < minTokens || tNext < minTokens);
+        tCombined <= maxTokens && (tAcc < minTokens || tNext < minTokens);
       if (shouldMerge) {
         acc = combined;
       } else {
@@ -362,7 +369,10 @@ export class MarkdownChunkTokenService {
     return result.map((content, chunkIndex) => ({ content, chunkIndex }));
   }
 
-  private async trimToMaxTokens(text: string, maxTokens: number): Promise<string> {
+  private async trimToMaxTokens(
+    text: string,
+    maxTokens: number,
+  ): Promise<string> {
     if ((await this.tokenService.countTokens(text)) <= maxTokens) {
       return text;
     }

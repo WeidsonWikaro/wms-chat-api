@@ -64,7 +64,9 @@ export function buildWmsChatGraph(
     config?: LangGraphRunnableConfig,
   ): Promise<{ messages: BaseMessage[] }> => {
     if (toolNodeTimeoutMs === undefined) {
-      return toolNode.invoke(state, config) as Promise<{ messages: BaseMessage[] }>;
+      return toolNode.invoke(state, config) as Promise<{
+        messages: BaseMessage[];
+      }>;
     }
     return toolNode.invoke(state, {
       ...config,
@@ -88,8 +90,7 @@ export function buildWmsChatGraph(
         toolRoundCount: decision.toolRoundCountDelta,
         lastToolCallsSignature: decision.lastToolCallsSignature,
         sameToolCallsStreak: decision.sameToolCallsStreak,
-        haltReason:
-          decision.goto === 'forceEnd' ? decision.haltReason : null,
+        haltReason: decision.goto === 'forceEnd' ? decision.haltReason : null,
       },
       goto: decision.goto,
     });
