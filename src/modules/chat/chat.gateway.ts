@@ -22,6 +22,10 @@ import { ChatService } from './chat.service';
  * Servidor → cliente (além dos já documentados): `chat:message_received`
  * `{ clientMessageId, conversationId, sentAt }` — hora oficial do servidor quando
  * a mensagem do utilizador é aceite (antes dos `chat:chunk` do assistente).
+ *
+ * `chat:chunk` — cada `chunk` é um **delta de texto** vindo do stream do modelo (tokens
+ * / pedaços pequenos), **não** blocos fixos de 64 caracteres. O cliente deve **concatenar**
+ * na ordem até `chat:complete` para essa `assistantMessageId`.
  */
 @WebSocketGateway({
   namespace: '/chat',

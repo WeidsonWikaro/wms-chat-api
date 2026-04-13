@@ -69,7 +69,7 @@ Assim, o **Chat** não importa `ChatGoogleGenerativeAI` nem `StateGraph`: só a 
 
 ### `services/llm-agent.service.ts`
 
-- **O quê:** Implementação Nest da porta: no **`onModuleInit`** instancia **`ChatGoogleGenerativeAI`**, compila o grafo; **`generateReply`** faz `invoke` com a mensagem do utilizador e devolve **texto** para o chat fatiar em chunks.
+- **O quê:** Implementação Nest da porta: no **`onModuleInit`** instancia **`ChatGoogleGenerativeAI`**, compila o grafo; **`streamReply`** corre o grafo com **`streamMode: "messages"`** e produz **deltas de texto** do nó `agent` (e mensagens finais do `forceEnd`); **`generateReply`** consome esse stream e devolve o texto completo.
 - **Por quê:** Lifecycle do Nest (`OnModuleInit`) e **`ConfigService`** ficam aqui; o ficheiro do grafo permanece **quase puro** (só definição). Tratamento de conteúdo da resposta (`AIMessage` com `content` string ou multimodal) também fica centralizado no serviço.
 
 ---

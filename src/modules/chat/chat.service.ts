@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import type { Socket } from 'socket.io';
+import type { ChatUserTurnContext } from '../llm/interfaces/chat-user-turn-context.interface';
 import type { ChatAssistantPort } from '../llm/ports/chat-assistant.port';
 import { CHAT_ASSISTANT } from '../llm/ports/chat-assistant.port';
 import { parseChatSendPayload } from './chat-validation';
@@ -162,15 +163,24 @@ export class ChatService {
       assistantMessageId,
       clientMessageId,
     } = params;
+    const disconnectAbort = new AbortController();
+    const onDisconnect = (): void => {
+      disconnectAbort.abort();
+    };
+    client.once('disconnect', onDisconnect);
+    const messageSentAt = nowIso();
+    const turnContext: ChatUserTurnContext = {
+      userId: params.userId,
+      activeConversationId,
+      parsed,
+    };
     try {
-      const full = await this.assistant.generateReply({
-        userId: params.userId,
-        activeConversationId,
-        parsed,
-      });
-      const chunks = this.splitIntoChunks(full);
-      const messageSentAt = nowIso();
-      for (const chunk of chunks) {
+      for await (const chunk of this.assistant.streamReply(turnContext, {
+        signal: disconnectAbort.signal,
+      })) {
+        if (!client.connected) {
+          break;
+        }
         client.emit('chat:chunk', {
           assistantMessageId,
           conversationId: activeConversationId,
@@ -178,11 +188,13 @@ export class ChatService {
           sentAt: messageSentAt,
         });
       }
-      client.emit('chat:complete', {
-        assistantMessageId,
-        conversationId: activeConversationId,
-        sentAt: messageSentAt,
-      });
+      if (client.connected) {
+        client.emit('chat:complete', {
+          assistantMessageId,
+          conversationId: activeConversationId,
+          sentAt: messageSentAt,
+        });
+      }
     } catch (err) {
       this.logger.error(err);
       client.emit('chat:error', {
@@ -191,6 +203,8 @@ export class ChatService {
         clientMessageId,
         sentAt: nowIso(),
       });
+    } finally {
+      client.removeListener('disconnect', onDisconnect);
     }
   }
 

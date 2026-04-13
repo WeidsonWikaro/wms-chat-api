@@ -260,8 +260,8 @@ Para outras regras (intenção, flags no estado, etc.), costuma-se escrever uma 
 
 | Ficheiro | Papel |
 |----------|--------|
-| `src/modules/chat/chat.service.ts` | Valida mensagem, chama `generateReply`, emite chunks no socket. |
-| `src/modules/llm/services/llm-agent.service.ts` | `onModuleInit` + `generateReply`; invoca o grafo. |
+| `src/modules/chat/chat.service.ts` | Valida mensagem, chama `streamReply` na porta, emite `chat:chunk` por delta e `chat:complete`. |
+| `src/modules/llm/services/llm-agent.service.ts` | `onModuleInit` + `streamReply` / `generateReply`; grafo com stream de mensagens. |
 | `src/modules/llm/tools/create-product-tools.ts` | Define `get_product_by_id` e `get_product_by_barcode`. |
 | `src/modules/llm/graph/wms-chat.graph.ts` | `buildWmsChatGraph` — `bindTools`, `ToolNode`, nós, arestas, `compile`. |
 | `src/modules/llm/llm.constants.ts` | `WMS_CHAT_SYSTEM_PROMPT` e default do modelo. |

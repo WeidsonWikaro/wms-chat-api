@@ -1,8 +1,11 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { BaseMessage } from '@langchain/core/messages';
-import { AIMessage } from '@langchain/core/messages';
-import { HumanMessage } from '@langchain/core/messages';
+import {
+  AIMessage,
+  HumanMessage,
+  isToolMessage,
+} from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HandlingUnitsService } from '../../wms/handling-unit/http/handling-units.service';
 import { LocationsService } from '../../wms/location/http/locations.service';
@@ -12,7 +15,10 @@ import { WmsUsersService } from '../../wms/wms-user/http/wms-users.service';
 import { ZonesService } from '../../wms/zone/http/zones.service';
 import { RagSearchService } from '../../rag/services/rag-search.service';
 import type { ChatUserTurnContext } from '../interfaces/chat-user-turn-context.interface';
-import type { ChatAssistantPort } from '../ports/chat-assistant.port';
+import type {
+  ChatAssistantPort,
+  StreamReplyOptions,
+} from '../ports/chat-assistant.port';
 import { buildWmsChatGraph } from '../graph/wms-chat.graph';
 import {
   DEFAULT_LLM_GOOGLE_MODEL,
@@ -78,6 +84,8 @@ function isTurnTimeoutError(err: unknown): boolean {
   }
   return false;
 }
+
+const STREAM_NODES = new Set<string>(['agent', 'forceEnd']);
 
 @Injectable()
 export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
@@ -174,40 +182,99 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
   }
 
   async generateReply(context: ChatUserTurnContext): Promise<string> {
+    let full = '';
+    for await (const delta of this.streamReply(context)) {
+      full += delta;
+    }
+    return full;
+  }
+
+  async *streamReply(
+    context: ChatUserTurnContext,
+    options?: StreamReplyOptions,
+  ): AsyncGenerator<string, void, undefined> {
     const text = context.parsed.payload.text;
-    const signal = AbortSignal.timeout(this.turnTimeoutMs);
+    const clientSignal = options?.signal;
+    const controller = new AbortController();
+    const onClientAbort = (): void => {
+      controller.abort();
+    };
+    if (clientSignal !== undefined && !clientSignal.aborted) {
+      clientSignal.addEventListener('abort', onClientAbort, { once: true });
+    }
+    if (clientSignal?.aborted === true) {
+      controller.abort();
+    }
+    const turnTimer = setTimeout(() => {
+      controller.abort();
+    }, this.turnTimeoutMs);
+    const input = {
+      messages: [new HumanMessage(text)],
+      toolRoundCount: 0,
+      lastToolCallsSignature: null,
+      sameToolCallsStreak: 0,
+      haltReason: null,
+    };
     try {
-      const result = (await this.graph.invoke(
-        {
-          messages: [new HumanMessage(text)],
-          toolRoundCount: 0,
-          lastToolCallsSignature: null,
-          sameToolCallsStreak: 0,
-          haltReason: null,
-        },
-        { recursionLimit: this.recursionLimit, signal },
-      )) as { messages: BaseMessage[] };
-      const last = result.messages[result.messages.length - 1];
-      if (last instanceof AIMessage) {
-        return this.messageContentToString(last);
+      const stream = await this.graph.stream(input, {
+        streamMode: 'messages',
+        recursionLimit: this.recursionLimit,
+        signal: controller.signal,
+      });
+      for await (const item of stream) {
+        if (controller.signal.aborted) {
+          break;
+        }
+        const pair = item as unknown;
+        if (!Array.isArray(pair) || pair.length !== 2) {
+          continue;
+        }
+        const [msg, rawMeta] = pair as [BaseMessage, Record<string, unknown>];
+        if (isToolMessage(msg)) {
+          continue;
+        }
+        const node = rawMeta.langgraph_node;
+        if (typeof node === 'string' && !STREAM_NODES.has(node)) {
+          continue;
+        }
+        const piece = this.messageBodyToText(msg);
+        if (piece.length > 0) {
+          yield piece;
+        }
       }
-      this.logger.warn(
-        'Last graph message was not AIMessage; coercing to string.',
-      );
-      return String((last as { content?: unknown })?.content ?? '');
     } catch (err) {
+      if (clientSignal?.aborted === true) {
+        return;
+      }
       if (isTurnTimeoutError(err)) {
         this.logger.warn(
           `Turn aborted by timeout after ${this.turnTimeoutMs}ms (socket user=${context.userId}).`,
         );
-        return WMS_CHAT_TURN_TIMEOUT_MESSAGE;
+        yield WMS_CHAT_TURN_TIMEOUT_MESSAGE;
+        return;
       }
       throw err;
+    } finally {
+      clearTimeout(turnTimer);
+      if (clientSignal !== undefined) {
+        clientSignal.removeEventListener('abort', onClientAbort);
+      }
     }
   }
 
-  private messageContentToString(message: AIMessage): string {
-    const { content } = message;
+  /**
+   * LangChain uses `_getType() === "ai"` for both {@link AIMessage} and {@link AIMessageChunk}
+   * (chunks are not `instanceof AIMessage`).
+   */
+  private messageBodyToText(message: BaseMessage): string {
+    if (message._getType() !== 'ai') {
+      return '';
+    }
+    const { content } = message as AIMessage;
+    return this.messageContentBlocksToString(content);
+  }
+
+  private messageContentBlocksToString(content: AIMessage['content']): string {
     if (typeof content === 'string') {
       return content;
     }

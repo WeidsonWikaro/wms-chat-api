@@ -9,6 +9,14 @@ export interface RagChunkRow {
   readonly distance: number;
 }
 
+interface RagChunkQueryRow {
+  id: string;
+  source_path: string;
+  chunk_index: number;
+  content: string;
+  distance: string | number;
+}
+
 /**
  * Acesso SQL a `rag_document_chunks` (coluna `vector` via literal PostgreSQL).
  */
@@ -49,21 +57,15 @@ export class RagChunkRepository {
     limit: number,
   ): Promise<RagChunkRow[]> {
     const vectorLiteral = formatVectorLiteral(queryEmbedding);
-    const rows = (await this.dataSource.query(
+    const rows = await this.dataSource.query(
       `SELECT id::text AS id, source_path, chunk_index, content,
               (embedding <=> $1::vector) AS distance
        FROM rag_document_chunks
        ORDER BY embedding <=> $1::vector
        LIMIT $2`,
       [vectorLiteral, limit],
-    )) as Array<{
-      id: string;
-      source_path: string;
-      chunk_index: number;
-      content: string;
-      distance: string | number;
-    }>;
-    return rows.map((r) => ({
+    );
+    return rows.map((r: RagChunkQueryRow) => ({
       id: r.id,
       sourcePath: r.source_path,
       chunkIndex: r.chunk_index,
