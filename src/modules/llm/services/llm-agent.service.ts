@@ -13,8 +13,10 @@ import { ProductsService } from '../../wms/products/http/products.service';
 import { WarehousesService } from '../../wms/warehouse/http/warehouses.service';
 import { WmsUsersService } from '../../wms/wms-user/http/wms-users.service';
 import { ZonesService } from '../../wms/zone/http/zones.service';
+import { InventoryAdjustmentsService } from '../../wms/inventory-adjustment/http/inventory-adjustments.service';
 import { RagSearchService } from '../../rag/services/rag-search.service';
 import type { ChatUserTurnContext } from '../interfaces/chat-user-turn-context.interface';
+import type { ChatApprovalSignal } from '../interfaces/chat-approval-signal.type';
 import type {
   ChatAssistantPort,
   StreamReplyOptions,
@@ -30,9 +32,13 @@ import {
   DEFAULT_LLM_TURN_TIMEOUT_MS,
   WMS_CHAT_TURN_TIMEOUT_MESSAGE,
 } from '../llm.constants';
+import { chatToolRuntimeStorage } from '../chat-tool-runtime.storage';
+import { createStreamChunkChannel } from '../stream-chunk-channel';
 import { createProductTools } from '../tools/create-product-tools';
+import { createInventoryAdjustmentConfirmTools } from '../tools/create-inventory-adjustment-confirm-tools';
 import { createRagTools } from '../../rag/tools/create-rag-tools';
 import { createWmsLookupTools } from '../tools/create-wms-lookup-tools';
+import { PendingInventoryAdjustmentStore } from './pending-inventory-adjustment.store';
 
 function parsePositiveInt(
   raw: string | number | undefined | null,
@@ -87,6 +93,33 @@ function isTurnTimeoutError(err: unknown): boolean {
 
 const STREAM_NODES = new Set<string>(['agent', 'forceEnd']);
 
+/** Max LangChain messages kept per conversation (user+assistant pairs); in-memory, single instance. */
+const CHAT_HISTORY_MAX_MESSAGES = 48;
+
+function parseApprovalSignalFromUserText(text: string): ChatApprovalSignal {
+  const normalized = text
+    .toLocaleLowerCase('pt-BR')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, ' ');
+  const hasApprove =
+    /\bsim\b/.test(normalized) ||
+    /\bconfirmo\b/.test(normalized) ||
+    /\baprov[ao]\b/.test(normalized);
+  const hasReject =
+    /\bnao\b/.test(normalized) ||
+    /\bnão\b/.test(text.toLocaleLowerCase('pt-BR')) ||
+    /\bcancelar\b/.test(normalized) ||
+    /\bcancela\b/.test(normalized) ||
+    /\brecuso\b/.test(normalized);
+  if (hasApprove && !hasReject) {
+    return 'approve';
+  }
+  if (hasReject && !hasApprove) {
+    return 'reject';
+  }
+  return 'none';
+}
+
 @Injectable()
 export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
   private readonly logger = new Logger(LlmAgentService.name);
@@ -94,6 +127,12 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
   private graph!: ReturnType<typeof buildWmsChatGraph>;
   private turnTimeoutMs!: number;
   private recursionLimit!: number;
+  private langSmithTracingEnabled = false;
+  /**
+   * Prior turns (HumanMessage + AIMessage) per conversation so each graph invoke sees context
+   * (e.g. pendingId from the assistant's previous reply when the user confirms).
+   */
+  private readonly conversationMessagesById = new Map<string, BaseMessage[]>();
 
   constructor(
     private readonly config: ConfigService,
@@ -103,6 +142,8 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
     private readonly zonesService: ZonesService,
     private readonly locationsService: LocationsService,
     private readonly handlingUnitsService: HandlingUnitsService,
+    private readonly inventoryAdjustmentsService: InventoryAdjustmentsService,
+    private readonly pendingInventoryAdjustmentStore: PendingInventoryAdjustmentStore,
     private readonly ragSearchService: RagSearchService,
   ) {}
 
@@ -161,6 +202,10 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
       model: modelName,
       temperature: 0.3,
     });
+    this.langSmithTracingEnabled =
+      String(this.config.get<string | boolean>('LANGSMITH_TRACING') ?? '')
+        .trim()
+        .toLowerCase() === 'true';
     const productTools = createProductTools(this.productsService);
     const wmsLookupTools = createWmsLookupTools({
       wmsUsersService: this.wmsUsersService,
@@ -170,14 +215,23 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
       handlingUnitsService: this.handlingUnitsService,
     });
     const ragTools = createRagTools(this.ragSearchService);
-    const allTools = [...productTools, ...wmsLookupTools, ...ragTools];
+    const inventoryAdjustmentTools = createInventoryAdjustmentConfirmTools({
+      adjustmentsService: this.inventoryAdjustmentsService,
+      pendingStore: this.pendingInventoryAdjustmentStore,
+    });
+    const allTools = [
+      ...productTools,
+      ...wmsLookupTools,
+      ...ragTools,
+      ...inventoryAdjustmentTools,
+    ];
     this.graph = buildWmsChatGraph(this.model, allTools, {
       limits: { maxToolRounds, maxSameToolStreak },
       modelCallTimeoutMs,
       toolNodeTimeoutMs,
     });
     this.logger.log(
-      `WMS chat graph ready (model=${modelName}, tools=${allTools.length}, turnTimeoutMs=${this.turnTimeoutMs}, recursionLimit=${this.recursionLimit}, maxToolRounds=${maxToolRounds}, maxSameToolStreak=${maxSameToolStreak}).`,
+      `WMS chat graph ready (model=${modelName}, tools=${allTools.length}, turnTimeoutMs=${this.turnTimeoutMs}, recursionLimit=${this.recursionLimit}, maxToolRounds=${maxToolRounds}, maxSameToolStreak=${maxSameToolStreak}, langSmithTracing=${this.langSmithTracingEnabled}).`,
     );
   }
 
@@ -189,11 +243,33 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
     return full;
   }
 
+  private recordConversationTurn(
+    conversationId: string,
+    userText: string,
+    assistantText: string,
+  ): void {
+    const prior = this.conversationMessagesById.get(conversationId) ?? [];
+    const merged: BaseMessage[] = [
+      ...prior,
+      new HumanMessage(userText),
+      new AIMessage({ content: assistantText }),
+    ];
+    if (merged.length > CHAT_HISTORY_MAX_MESSAGES) {
+      this.conversationMessagesById.set(
+        conversationId,
+        merged.slice(-CHAT_HISTORY_MAX_MESSAGES),
+      );
+    } else {
+      this.conversationMessagesById.set(conversationId, merged);
+    }
+  }
+
   async *streamReply(
     context: ChatUserTurnContext,
     options?: StreamReplyOptions,
   ): AsyncGenerator<string, void, undefined> {
     const text = context.parsed.payload.text;
+    const approvalSignal = parseApprovalSignalFromUserText(text);
     const clientSignal = options?.signal;
     const controller = new AbortController();
     const onClientAbort = (): void => {
@@ -208,49 +284,95 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
     const turnTimer = setTimeout(() => {
       controller.abort();
     }, this.turnTimeoutMs);
+    const conversationId = context.activeConversationId;
+    const priorMessages =
+      this.conversationMessagesById.get(conversationId) ?? [];
     const input = {
-      messages: [new HumanMessage(text)],
+      messages: [...priorMessages, new HumanMessage(text)],
       toolRoundCount: 0,
       lastToolCallsSignature: null,
       sameToolCallsStreak: 0,
       haltReason: null,
+      approvalSignal,
     };
-    try {
-      const stream = await this.graph.stream(input, {
-        streamMode: 'messages',
-        recursionLimit: this.recursionLimit,
-        signal: controller.signal,
-      });
-      for await (const item of stream) {
-        if (controller.signal.aborted) {
-          break;
+    const channel = createStreamChunkChannel({
+      onFail: () => {
+        controller.abort();
+      },
+    });
+    const runtimeCtx = {
+      userId: context.userId,
+      conversationId: context.activeConversationId,
+      approvalSignal,
+      clientMessageId: context.parsed.payload.clientMessageId,
+    };
+    const producer = chatToolRuntimeStorage.run(runtimeCtx, async () => {
+      try {
+        const stream = await this.graph.stream(input, {
+          streamMode: 'messages',
+          recursionLimit: this.recursionLimit,
+          signal: controller.signal,
+          runName: 'wms-chat-turn',
+          tags: ['wms-chat', 'langgraph', 'hitl-strict'],
+          metadata: {
+            userId: context.userId,
+            conversationId: context.activeConversationId,
+            clientMessageId: context.parsed.payload.clientMessageId,
+            approvalSignal,
+          },
+        });
+        for await (const item of stream) {
+          if (controller.signal.aborted) {
+            break;
+          }
+          const pair = item as unknown;
+          if (!Array.isArray(pair) || pair.length !== 2) {
+            continue;
+          }
+          const [msg, rawMeta] = pair as [BaseMessage, Record<string, unknown>];
+          if (isToolMessage(msg)) {
+            continue;
+          }
+          const node = rawMeta.langgraph_node;
+          const piece = this.messageBodyToText(msg);
+          if (
+            typeof node === 'string' &&
+            !STREAM_NODES.has(node) &&
+            piece.length === 0
+          ) {
+            continue;
+          }
+          if (piece.length > 0) {
+            channel.push(piece);
+          }
         }
-        const pair = item as unknown;
-        if (!Array.isArray(pair) || pair.length !== 2) {
-          continue;
+      } catch (err) {
+        if (clientSignal?.aborted === true) {
+          return;
         }
-        const [msg, rawMeta] = pair as [BaseMessage, Record<string, unknown>];
-        if (isToolMessage(msg)) {
-          continue;
+        if (isTurnTimeoutError(err)) {
+          this.logger.warn(
+            `Turn aborted by timeout after ${this.turnTimeoutMs}ms (socket user=${context.userId}).`,
+          );
+          channel.push(WMS_CHAT_TURN_TIMEOUT_MESSAGE);
+          return;
         }
-        const node = rawMeta.langgraph_node;
-        if (typeof node === 'string' && !STREAM_NODES.has(node)) {
-          continue;
-        }
-        const piece = this.messageBodyToText(msg);
-        if (piece.length > 0) {
-          yield piece;
-        }
+        channel.fail(err);
+      } finally {
+        channel.close();
       }
+    });
+    let assistantBuffer = '';
+    let streamCompleted = false;
+    try {
+      for await (const chunk of channel.chunks) {
+        assistantBuffer += chunk;
+        yield chunk;
+      }
+      await producer;
+      streamCompleted = true;
     } catch (err) {
       if (clientSignal?.aborted === true) {
-        return;
-      }
-      if (isTurnTimeoutError(err)) {
-        this.logger.warn(
-          `Turn aborted by timeout after ${this.turnTimeoutMs}ms (socket user=${context.userId}).`,
-        );
-        yield WMS_CHAT_TURN_TIMEOUT_MESSAGE;
         return;
       }
       throw err;
@@ -259,19 +381,30 @@ export class LlmAgentService implements ChatAssistantPort, OnModuleInit {
       if (clientSignal !== undefined) {
         clientSignal.removeEventListener('abort', onClientAbort);
       }
+      if (
+        streamCompleted &&
+        (clientSignal === undefined || clientSignal.aborted !== true)
+      ) {
+        this.recordConversationTurn(conversationId, text, assistantBuffer);
+      }
     }
   }
 
   /**
    * LangChain uses `_getType() === "ai"` for both {@link AIMessage} and {@link AIMessageChunk}
    * (chunks are not `instanceof AIMessage`).
+   * Prefer {@link BaseMessage#text}: Gemini / v1 content blocks may leave `content` empty in chunks
+   * while `.text` still aggregates user-visible text.
    */
   private messageBodyToText(message: BaseMessage): string {
     if (message._getType() !== 'ai') {
       return '';
     }
-    const { content } = message as AIMessage;
-    return this.messageContentBlocksToString(content);
+    const ai = message as AIMessage;
+    if (typeof ai.text === 'string' && ai.text.length > 0) {
+      return ai.text;
+    }
+    return this.messageContentBlocksToString(ai.content);
   }
 
   private messageContentBlocksToString(content: AIMessage['content']): string {

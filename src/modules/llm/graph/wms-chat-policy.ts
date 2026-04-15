@@ -3,6 +3,7 @@ import {
   ToolMessage,
   type BaseMessage,
 } from '@langchain/core/messages';
+import type { ChatApprovalSignal } from '../interfaces/chat-approval-signal.type';
 import type { WmsChatHaltReason } from './wms-chat-state.annotation';
 
 export interface WmsChatPolicyLimits {
@@ -16,6 +17,11 @@ export interface AfterToolsPolicyDecision {
   readonly lastToolCallsSignature: string | null;
   readonly sameToolCallsStreak: number;
   readonly goto: 'agent' | 'forceEnd';
+  readonly haltReason: WmsChatHaltReason | null;
+}
+
+export interface BeforeToolsPolicyDecision {
+  readonly goto: 'tools' | 'forceEnd';
   readonly haltReason: WmsChatHaltReason | null;
 }
 
@@ -76,6 +82,36 @@ export function findLastAiMessageWithToolCalls(
     return null;
   }
   return candidate;
+}
+
+function hasConfirmInventoryAdjustmentCall(ai: AIMessage | null): boolean {
+  if (ai === null || !Array.isArray(ai.tool_calls)) {
+    return false;
+  }
+  return ai.tool_calls.some(
+    (call) => String(call?.name ?? '') === 'confirm_inventory_adjustment',
+  );
+}
+
+/**
+ * Strict HITL gate before ToolNode: block inventory confirmation calls unless the turn carries
+ * an explicit human approval/rejection signal.
+ */
+export function decideBeforeToolsPolicy(
+  messages: BaseMessage[],
+  approvalSignal: ChatApprovalSignal,
+): BeforeToolsPolicyDecision {
+  const ai = findLastAiMessageWithToolCalls(messages);
+  if (!hasConfirmInventoryAdjustmentCall(ai)) {
+    return { goto: 'tools', haltReason: null };
+  }
+  if (approvalSignal === 'approve' || approvalSignal === 'reject') {
+    return { goto: 'tools', haltReason: null };
+  }
+  return {
+    goto: 'forceEnd',
+    haltReason: 'confirmation_required',
+  };
 }
 
 /**

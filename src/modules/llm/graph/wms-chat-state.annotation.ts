@@ -1,10 +1,14 @@
 import type { BaseMessage } from '@langchain/core/messages';
 import { Annotation, messagesStateReducer } from '@langchain/langgraph';
+import type { ChatApprovalSignal } from '../interfaces/chat-approval-signal.type';
 
 /**
  * Set when routing to {@link forceEnd}: which user-facing message to emit.
  */
-export type WmsChatHaltReason = 'max_tool_rounds' | 'repeated_tool_calls';
+export type WmsChatHaltReason =
+  | 'max_tool_rounds'
+  | 'repeated_tool_calls'
+  | 'confirmation_required';
 
 /**
  * LangGraph state: chat messages plus policy counters (tool rounds, repeated tool signatures).
@@ -29,5 +33,9 @@ export const WmsChatStateAnnotation = Annotation.Root({
   haltReason: Annotation<WmsChatHaltReason | null>({
     reducer: (_previous, next) => next,
     default: () => null,
+  }),
+  approvalSignal: Annotation<ChatApprovalSignal>({
+    reducer: (_previous, next) => next,
+    default: () => 'none',
   }),
 });

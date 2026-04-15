@@ -10,7 +10,7 @@ Use os checkboxes abaixo para acompanhar o que já foi feito. Marque `- [x]` qua
 
 **Por que importa:** base para alinhar sistema e estoque físico antes de processos mais automáticos.
 
-- [x] **Status:** concluído
+- **Status:** concluído
 
 ---
 
@@ -20,7 +20,7 @@ Use os checkboxes abaixo para acompanhar o que já foi feito. Marque `- [x]` qua
 
 **Por que importa:** evita over-commit e conflitos entre pedidos.
 
-- [x] **Status:** concluído
+- **Status:** concluído
 
 ---
 
@@ -30,7 +30,7 @@ Use os checkboxes abaixo para acompanhar o que já foi feito. Marque `- [x]` qua
 
 **Por que importa:** fecha o ciclo operacional do pedido de separação.
 
-- [x] **Status:** concluído
+- **Status:** concluído
 
 ---
 
@@ -40,7 +40,7 @@ Use os checkboxes abaixo para acompanhar o que já foi feito. Marque `- [x]` qua
 
 **Por que importa:** materializa a transferência interna no estoque.
 
-- [x] **Status:** concluído
+- **Status:** concluído
 
 ---
 
@@ -50,7 +50,7 @@ Use os checkboxes abaixo para acompanhar o que já foi feito. Marque `- [x]` qua
 
 **Por que importa:** entrega valor rápido sem integração pesada com fornecedor.
 
-- [x] **Status:** concluído
+- **Status:** concluído
 
 ---
 
@@ -60,7 +60,7 @@ Use os checkboxes abaixo para acompanhar o que já foi feito. Marque `- [x]` qua
 
 **Por que importa:** organiza o depósito após a entrada.
 
-- [x] **Status:** concluído
+- **Status:** concluído
 
 ---
 
@@ -70,7 +70,7 @@ Use os checkboxes abaixo para acompanhar o que já foi feito. Marque `- [x]` qua
 
 **Por que importa:** melhora acurácia contínua sem parar o armazém inteiro.
 
-- [x] **Status:** concluído
+- **Status:** concluído
 
 ---
 
@@ -80,7 +80,7 @@ Use os checkboxes abaixo para acompanhar o que já foi feito. Marque `- [x]` qua
 
 **Por que importa:** ganho de produtividade em operações maiores.
 
-- [x] **Status:** concluído
+- **Status:** concluído
 
 ---
 
@@ -90,7 +90,7 @@ Use os checkboxes abaixo para acompanhar o que já foi feito. Marque `- [x]` qua
 
 **Por que importa:** escala o uso em produção, mas aumenta escopo, contratos e testes.
 
-- [x] **Status:** concluído (stub de status e contratos)
+- **Status:** concluído (stub de status e contratos)
 
 ---
 
@@ -98,3 +98,4 @@ Use os checkboxes abaixo para acompanhar o que já foi feito. Marque `- [x]` qua
 
 - Ordem sugerida de implementação segue a numeração acima (do mais simples ao mais complexo).
 - Ao concluir um item, marque o checkbox e, se quiser, adicione uma linha `**Concluído em:** data` abaixo do item.
+

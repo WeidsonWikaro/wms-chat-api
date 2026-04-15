@@ -123,6 +123,7 @@ const wmsProviders = [
     ZonesService,
     LocationsService,
     HandlingUnitsService,
+    InventoryAdjustmentsService,
   ],
 })
 export class WmsModule {}

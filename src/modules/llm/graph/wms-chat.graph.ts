@@ -12,10 +12,12 @@ import {
 import { ToolNode, toolsCondition } from '@langchain/langgraph/prebuilt';
 import {
   WMS_CHAT_FORCE_END_MAX_TOOL_ROUNDS,
+  WMS_CHAT_FORCE_END_CONFIRMATION_REQUIRED,
   WMS_CHAT_FORCE_END_REPEATED_TOOLS,
   WMS_CHAT_SYSTEM_PROMPT,
 } from '../llm.constants';
 import {
+  decideBeforeToolsPolicy,
   decideAfterToolsPolicy,
   type WmsChatPolicyLimits,
 } from './wms-chat-policy';
@@ -96,6 +98,35 @@ export function buildWmsChatGraph(
     });
   };
 
+  const policyBeforeTools = (
+    state: typeof WmsChatStateAnnotation.State,
+  ): Command => {
+    const decision = decideBeforeToolsPolicy(
+      state.messages,
+      state.approvalSignal,
+    );
+    return new Command({
+      update: {
+        haltReason: decision.goto === 'forceEnd' ? decision.haltReason : null,
+      },
+      goto: decision.goto,
+    });
+  };
+
+  /**
+   * `toolsCondition` returns `"tools"` | END for a node literally named `tools`.
+   * This graph routes tool calls through `policyBeforeTools` first, so we map `"tools"` → that node.
+   */
+  const routeAfterAgent = (
+    state: typeof WmsChatStateAnnotation.State,
+  ): 'policyBeforeTools' | typeof END => {
+    const next = toolsCondition(state);
+    if (next === 'tools') {
+      return 'policyBeforeTools';
+    }
+    return END;
+  };
+
   const forceEnd = async (
     state: typeof WmsChatStateAnnotation.State,
   ): Promise<{
@@ -106,7 +137,9 @@ export function buildWmsChatGraph(
     const content =
       reason === 'repeated_tool_calls'
         ? WMS_CHAT_FORCE_END_REPEATED_TOOLS
-        : WMS_CHAT_FORCE_END_MAX_TOOL_ROUNDS;
+        : reason === 'confirmation_required'
+          ? WMS_CHAT_FORCE_END_CONFIRMATION_REQUIRED
+          : WMS_CHAT_FORCE_END_MAX_TOOL_ROUNDS;
     return {
       messages: [new AIMessage({ content })],
       haltReason: null,
@@ -114,14 +147,18 @@ export function buildWmsChatGraph(
   };
 
   return new StateGraph(WmsChatStateAnnotation)
-    .addNode('agent', agent, { ends: ['tools', END] })
+    .addNode('agent', agent, { ends: ['policyBeforeTools', END] })
+    .addNode('policyBeforeTools', policyBeforeTools, {
+      ends: ['tools', 'forceEnd'],
+    })
     .addNode('tools', runTools, { ends: ['policyAfterTools'] })
     .addNode('policyAfterTools', policyAfterTools, {
       ends: ['agent', 'forceEnd'],
     })
     .addNode('forceEnd', forceEnd, { ends: [END] })
     .addEdge(START, 'agent')
-    .addConditionalEdges('agent', toolsCondition, ['tools', END])
+    .addConditionalEdges('agent', routeAfterAgent, ['policyBeforeTools', END])
+    .addEdge('policyBeforeTools', 'tools')
     .addEdge('tools', 'policyAfterTools')
     .addEdge('forceEnd', END)
     .compile();

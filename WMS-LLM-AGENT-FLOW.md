@@ -234,7 +234,7 @@ Uma **aresta condicional** é uma **bifurcação**: depois do nó X, o **próxim
 
 | Método | Argumentos (ideia) | O que faz |
 |--------|---------------------|-----------|
-| **`addNode(nome, ação)`** | **nome**: string do nó. **ação**: função ou runnable executado quando o fluxo entra nesse nó. | Regista um passo no grafo. |
+| **`addNode(nome, ação, opções?)`** | **nome**: string do nó. **ação**: função ou runnable executado quando o fluxo entra nesse nó. **opções** (opcional): metadados do nó; em grafos com **`Command`** e **`goto`**, usa-se tipicamente **`ends`**: array dos destinos possíveis (nomes de nós ou `END`), para o compilador conhecer as saídas válidas. Ex.: `.addNode('agent', agent, { ends: ['policyBeforeTools', END] })` em `wms-chat.graph.ts`. | Regista um passo no grafo. |
 | **`addEdge(origem, destino)`** | **origem**: nó de saída ou `START`. **destino**: nó de entrada ou `END`. | Ligação **sempre** igual: origem → destino. |
 | **`addConditionalEdges(origem, condição, mapaDestinos)`** | **origem**: nó após o qual se decide. **condição**: função (ex. `toolsCondition`) que devolve para onde ir. **mapaDestinos**: lista/objeto que associa esse retorno aos nós possíveis (ex. `['tools', END]`). | **Bifurcação** conforme regra. |
 | **`addSequence(...)`** | Vários nós em sequência. | Adiciona nós e liga **em cadeia** (útil para pipelines lineares). |
